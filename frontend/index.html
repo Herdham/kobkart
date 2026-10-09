@@ -2,12 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <meta name="theme-color" content="#6b0f1e" />
+    <title>Kobkart</title>
   </head>
   <body>
     <div id="root"></div>
+    <script>
+  window.addEventListener('error', function (e) {
+    document.body.insertAdjacentHTML('beforeend',
+      '<pre style="padding:16px;color:#a3202f;white-space:pre-wrap">' + e.message + '\n' + e.filename + ':' + e.lineno + '</pre>')
+  })
+  window.addEventListener('unhandledrejection', function (e) {
+    document.body.insertAdjacentHTML('beforeend',
+      '<pre style="padding:16px;color:#a3202f;white-space:pre-wrap">' + String(e.reason) + '</pre>')
+  })
+</script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

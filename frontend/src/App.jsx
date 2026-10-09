@@ -1,122 +1,58 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import Landing from './pages/Landing'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
+import VerifyCode from './pages/VerifyCode'
+import ResetPassword from './pages/ResetPassword'
+import Dashboard from './pages/Dashboard'
+import Packages from './pages/Packages'
+import PackageDetail from './pages/PackageDetail'
+import MyStore from './pages/MyStore'
+import Join from './pages/Join'
+import PlanDetail from './pages/PlanDetail'
+import Contributions from './pages/Contributions'
+import PaymentCallback from './pages/PaymentCallback'
+import Orders from './pages/Orders'
+import Customers from './pages/Customers'
+import SellerPayments from './pages/SellerPayments'
+import Browse from './pages/Browse'
+import GroupDetail from './pages/GroupDetail'
+import { getSession } from './api/auth'
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+function RequireRole({ role, children }) {
+  const s = getSession()
+  if (!s) return <Navigate to="/login" replace />
+  if (role && s.user?.role !== role) return <Navigate to="/dashboard" replace />
+  return children
 }
 
-export default App
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/verify-email" element={<VerifyCode />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
+      <Route path="/dashboard" element={<RequireRole><Dashboard /></RequireRole>} />
+      <Route path="/store" element={<RequireRole role="seller"><MyStore /></RequireRole>} />
+      <Route path="/packages" element={<RequireRole role="seller"><Packages /></RequireRole>} />
+      <Route path="/packages/:id" element={<RequireRole role="seller"><PackageDetail /></RequireRole>} />
+      <Route path="/join" element={<Join />} />
+      <Route path="/join/:code" element={<Join />} />
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/plans/:id" element={<RequireRole role="customer"><PlanDetail /></RequireRole>} />
+      <Route path="/contributions" element={<RequireRole role="customer"><Contributions /></RequireRole>} />
+      <Route path="/payment/callback" element={<RequireRole role="customer"><PaymentCallback /></RequireRole>} />
+      <Route path="/orders" element={<RequireRole role="seller"><Orders /></RequireRole>} />
+      <Route path="/customers" element={<RequireRole role="seller"><Customers /></RequireRole>} />
+      <Route path="/payments" element={<RequireRole role="seller"><SellerPayments /></RequireRole>} />
+      <Route path="/browse" element={<Browse />} />
+          <Route path="/groups/:id" element={<RequireRole><GroupDetail /></RequireRole>} />
+    </Routes>
+  )
+}
