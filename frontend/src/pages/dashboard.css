@@ -440,3 +440,10 @@
 .start-box { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
 .start-box input[type='date'] { height: 46px; border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; font: inherit; background: #fff; }
 @media (max-width: 480px) { .kind-pick { grid-template-columns: 1fr; } }
+
+/* ---------- legal pages ---------- */
+.legal { max-width: 760px; margin: 0 auto; width: 100%; }
+.legal h1 { margin: 14px 0 4px; font-size: 28px; font-weight: 600; letter-spacing: -0.4px; }
+.legal h2 { margin: 22px 0 6px; font-size: 16px; font-weight: 600; color: var(--maroon); }
+.legal p { margin: 0 0 8px; font-size: 14.5px; line-height: 1.7; color: #3f3135; }
+.legal-nav { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 26px; padding-top: 16px; border-top: 1px solid #f1e6e6; font-size: 14px; }

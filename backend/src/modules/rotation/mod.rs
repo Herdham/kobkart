@@ -9,7 +9,7 @@ use axum::{
     Json, Router,
 };
 use chrono::{Duration, NaiveDate, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sqlx::FromRow;
 use uuid::Uuid;
@@ -22,6 +22,7 @@ pub fn routes() -> Router<AppState> {
         .route("/rotation/{channel_id}/start", post(start))
         .route("/rotation/{channel_id}/rounds/{round_no}/collected", put(set_collected))
         .route("/rotation/{channel_id}/members/{member_id}", delete(remove_member))
+        .route("/seller/collections", get(collections))
 }
 
 #[derive(FromRow)]
@@ -407,4 +408,41 @@ async fn remove_member(
     .await?;
     tx.commit().await?;
     Ok(Json(json!({ "ok": true })))
+}
+
+#[derive(Serialize, FromRow)]
+struct CollectionRow {
+    channel_id: Uuid,
+    channel_name: String,
+    round_no: i32,
+    due_date: NaiveDate,
+    collected: bool,
+    collector_name: String,
+    collector_phone: String,
+    pot: i64,
+    paid_count: i64,
+    member_count: i64,
+}
+
+/// Every collection round across the seller's groups: who is due the goods and how much has come in.
+async fn collections(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<Vec<CollectionRow>>> {
+    u.require("seller")?;
+    let rows: Vec<CollectionRow> = sqlx::query_as(
+        "SELECT c.id AS channel_id, c.name AS channel_name, r.round_no, r.due_date, r.collected,
+                u.full_name AS collector_name, u.phone AS collector_phone,
+                (c.contribution_amount * (SELECT COUNT(*) FROM rotation_members x WHERE x.channel_id = c.id))::BIGINT AS pot,
+                (SELECT COUNT(*) FROM rotation_members m3 WHERE m3.channel_id = c.id
+                   AND (SELECT COUNT(*) FROM payments py WHERE py.plan_id = m3.plan_id AND py.status = 'success') >= r.round_no) AS paid_count,
+                (SELECT COUNT(*) FROM rotation_members m4 WHERE m4.channel_id = c.id) AS member_count
+         FROM rotation_rounds r
+         JOIN channels c ON c.id = r.channel_id
+         JOIN rotation_members m ON m.channel_id = r.channel_id AND m.position = r.round_no
+         JOIN users u ON u.id = m.user_id
+         WHERE c.seller_id = $1 AND c.kind = 'rotation'
+         ORDER BY r.collected, r.due_date",
+    )
+    .bind(u.id)
+    .fetch_all(&s.db)
+    .await?;
+    Ok(Json(rows))
 }

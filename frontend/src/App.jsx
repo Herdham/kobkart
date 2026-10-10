@@ -18,6 +18,7 @@ import Customers from './pages/Customers'
 import SellerPayments from './pages/SellerPayments'
 import Browse from './pages/Browse'
 import GroupDetail from './pages/GroupDetail'
+import Legal from './pages/Legal'
 import { getSession } from './api/auth'
 
 function RequireRole({ role, children }) {
@@ -53,6 +54,9 @@ export default function App() {
       <Route path="/payments" element={<RequireRole role="seller"><SellerPayments /></RequireRole>} />
       <Route path="/browse" element={<Browse />} />
           <Route path="/groups/:id" element={<RequireRole><GroupDetail /></RequireRole>} />
+          <Route path="/terms" element={<Legal doc="terms" />} />
+      <Route path="/privacy" element={<Legal doc="privacy" />} />
+      <Route path="/seller-agreement" element={<Legal doc="seller" />} />
     </Routes>
   )
 }

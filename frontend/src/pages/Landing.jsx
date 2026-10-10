@@ -245,7 +245,7 @@ export default function Landing() {
           </div>
           <div className="lp-foot-bottom">
             <span>© {new Date().getFullYear()} Kobkart. All rights reserved.</span>
-            <span>Privacy Policy &nbsp;·&nbsp; Terms &amp; Conditions</span>
+            <span><Link to="/privacy">Privacy Policy</Link> &nbsp;·&nbsp; <Link to="/terms">Terms &amp; Conditions</Link></span>
           </div>
         </div>
       </footer>

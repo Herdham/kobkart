@@ -12,6 +12,7 @@ export default function Register() {
   const nav = useNavigate()
   const [role, setRole] = useState('customer')
   const [form, setForm] = useState({ full_name: '', business_name: '', email: '', phone: '', password: '', confirm: '', referral: '' })
+  const [agreeSeller, setAgreeSeller] = useState(false)
   const [agree, setAgree] = useState(false)
   const [errors, setErrors] = useState({})
   const [apiError, setApiError] = useState('')
@@ -29,6 +30,7 @@ export default function Register() {
     if (phoneDigits.length < 10 || phoneDigits.length > 13) e.phone = 'Enter a valid phone number'
     if (form.password.length < 8) e.password = 'Use at least 8 characters'
     if (form.confirm !== form.password) e.confirm = 'Passwords do not match'
+    if (isSeller && !agreeSeller) e.agreeSeller = 'Please accept the Seller Agreement to continue'
     if (!agree) e.agree = 'Please accept the Terms & Conditions to continue'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -95,9 +97,16 @@ export default function Register() {
 
         <label className="check terms">
           <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
-          <span>I agree to the <b className="link-strong">Terms &amp; Conditions</b> and <b className="link-strong">Privacy Policy</b></span>
+          <span>I agree to the <Link to="/terms" target="_blank" className="link-strong">Terms &amp; Conditions</Link> and <Link to="/privacy" target="_blank" className="link-strong">Privacy Policy</Link></span>
         </label>
         {errors.agree && <p className="field-error">{errors.agree}</p>}
+        {isSeller && (
+          <label className="check terms">
+            <input type="checkbox" checked={agreeSeller} onChange={(e) => setAgreeSeller(e.target.checked)} />
+            <span>I have read and accept the <Link to="/seller-agreement" target="_blank" className="link-strong">Seller Agreement</Link></span>
+          </label>
+        )}
+        {errors.agreeSeller && <p className="field-error">{errors.agreeSeller}</p>}
 
         <button className="btn-primary" disabled={loading}>
           {loading ? 'Creating account...' : <>Create Account <ArrowRight size={18} /></>}
