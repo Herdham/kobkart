@@ -5,6 +5,7 @@ import DashboardLayout from '../components/DashboardLayout'
 import { api } from '../api/http'
 import { naira, shortDate, whatsappLink } from '../api/seller'
 import './dashboard.css'
+import { socialUrl } from '../api/links'
 
 const TABS = [
   ['pending', 'Pending approval'],
@@ -114,6 +115,14 @@ export default function AdminDashboard() {
                       <b>{s.business_name}</b>
                       <small>{s.full_name} • {s.phone}</small>
                       <small>{s.email}</small>
+                      <small>{s.location || 'No location'}{s.whatsapp ? ` • WhatsApp ${s.whatsapp}` : ''}</small>
+                      {s.bio && <small>{s.bio}</small>}
+                      <div className="ad-links">
+                        {[['Instagram', 'instagram'], ['Facebook', 'facebook'], ['X', 'x_handle'], ['Website', 'website']].map(([label, key]) =>
+                          s[key] ? <a key={key} href={socialUrl(key, s[key])} target="_blank" rel="noreferrer noopener">{label}</a> : null
+                        )}
+                        {!s.instagram && !s.facebook && !s.x_handle && !s.website && <span className="bd late">No social link</span>}
+                      </div>
                       <div className="ad-badges">
                         <span className={`bd ${s.verified ? 'ontrack' : 'completed'}`}>{s.verified ? 'Approved' : 'Pending'}</span>
                         <span className={`bd ${s.payout_ready ? 'ontrack' : 'late'}`}>{s.payout_ready ? 'Payout ready' : 'No payout account'}</span>

@@ -292,7 +292,7 @@ async fn browse(State(s): State<AppState>, Query(q): Query<BrowseQ>) -> AppResul
                 (SELECT COUNT(*) FROM rotation_members rm WHERE rm.channel_id = c.id) AS filled
          FROM channels c
          JOIN sellers s ON s.user_id = c.seller_id
-         WHERE c.is_public AND s.verified
+         WHERE c.is_public AND s.verified AND NOT EXISTS (SELECT 1 FROM users su WHERE su.id = s.user_id AND su.suspended_at IS NOT NULL)
            AND (
                 (c.kind = 'save' AND EXISTS (SELECT 1 FROM products x WHERE x.channel_id = c.id AND x.active))
              OR (c.kind = 'rotation' AND c.rotation_status = 'open'

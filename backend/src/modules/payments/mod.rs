@@ -63,6 +63,15 @@ async fn pay(u: AuthUser, State(s): State<AppState>, Path(plan_id): Path<Uuid>) 
     if not_started {
         return Err(AppError::BadRequest("This group has not started yet. You can pay once your seller starts it.".into()));
     }
+    let seller_suspended: bool = sqlx::query_scalar(
+        "SELECT su.suspended_at IS NOT NULL FROM channels c JOIN users su ON su.id = c.seller_id WHERE c.id = $1",
+    )
+    .bind(channel_id)
+    .fetch_one(&s.db)
+    .await?;
+    if seller_suspended {
+        return Err(AppError::BadRequest("This seller is currently unavailable.".into()));
+    }
     let amount = installment.min(locked - paid);
     if amount <= 0 {
         return Err(AppError::BadRequest("Nothing left to pay".into()));

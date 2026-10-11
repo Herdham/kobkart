@@ -54,6 +54,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(modules::payments::routes())
         .merge(modules::dashboard::routes())
         .merge(modules::admin::routes())
+        .merge(modules::orders::routes())
+        .merge(modules::account::routes())
         .merge(modules::rotation::routes())
         .layer(TraceLayer::new_for_http())
         .layer(cors)

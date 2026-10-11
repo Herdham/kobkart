@@ -68,7 +68,7 @@ const DOCS = {
         'To run your account, process payments, show sellers who has joined and who is late, send verification codes and reminders, prevent fraud, and meet legal duties.',
       ] },
       { h: '5. Who can see your information', p: [
-        'Sellers see the name, phone number and payment status of customers in their own packages. Members of a group can see each other\'s names and positions, but not phone numbers. Our service providers, such as Paystack, our email provider and our hosting provider, handle data for us. We share information with authorities only when the law requires it.',
+        'Sellers see the name, phone number and payment status of customers in their own packages.Customers can see the business contact number of a seller whose package they have joined. Members of a group can see each other\'s names, positions and whether each person is up to date with payments, but not phone numbers. Our service providers, such as Paystack, our email provider and our hosting provider, handle data for us. We share information with authorities only when the law requires it.',
       ] },
       { h: '6. Keeping it safe', p: [
         'We use secure connections, scrambled passwords and limited access. No system is perfectly safe, so please use a strong password and keep it private.',

@@ -18,22 +18,22 @@ const NAVS = {
     ['orders', 'Orders', ShoppingBag, '/orders'],
     ['messages', 'Messages', MessageSquare],
     ['reports', 'Reports', TrendingUp],
-    ['settings', 'Settings', Settings],
+    ['settings', 'Settings', Settings, '/settings'],
   ],
   customer: [
     ['dashboard', 'Dashboard', LayoutDashboard, '/dashboard'],
     ['browse', 'Browse Packages', Search, '/browse'],
     ['join', 'Join with a code', Package, '/join'],
     ['contributions', 'My Contributions', CreditCard, '/contributions'],
-    ['orders', 'My Orders', ShoppingBag],
+    ['orders', 'My Orders', ShoppingBag, '/my-orders'],
     ['messages', 'Messages', MessageSquare],
-    ['settings', 'Settings', Settings],
+    ['settings', 'Settings', Settings, '/settings'],
   ],
   admin: [
     ['dashboard', 'Dashboard', LayoutDashboard, '/dashboard'],
-    ['users', 'Users', Users],
+    ['users', 'Users', Users, '/admin/users'],
     ['reports', 'Reports', TrendingUp],
-    ['settings', 'Settings', Settings],
+    ['settings', 'Settings', Settings, '/settings'],
   ],
 }
 

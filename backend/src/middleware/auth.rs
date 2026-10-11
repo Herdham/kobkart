@@ -54,6 +54,16 @@ impl FromRequestParts<AppState> for AuthUser {
         )
         .map_err(|_| AppError::Unauthorized)?;
         let id = Uuid::parse_str(&data.claims.sub).map_err(|_| AppError::Unauthorized)?;
-        Ok(AuthUser { id, role: data.claims.role })
+        let row: Option<(bool, String)> =
+            sqlx::query_as("SELECT suspended_at IS NOT NULL, role FROM users WHERE id = $1")
+                .bind(id)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(|e| AppError::Internal(e.to_string()))?;
+        match row {
+            None => Err(AppError::Unauthorized),
+            Some((true, _)) => Err(AppError::Suspended),
+            Some((false, role)) => Ok(AuthUser { id, role }),
+        }
     }
 }

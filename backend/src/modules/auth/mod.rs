@@ -52,13 +52,13 @@ fn hash_password(pw: &str) -> Result<String, AppError> {
         .map_err(|e| AppError::Internal(e.to_string()))
 }
 
-fn verify_password(pw: &str, hash: &str) -> bool {
+pub fn verify_password(pw: &str, hash: &str) -> bool {
     PasswordHash::new(hash)
         .map(|p| Argon2::default().verify_password(pw.as_bytes(), &p).is_ok())
         .unwrap_or(false)
 }
 
-async fn hash_password_async(pw: String) -> AppResult<String> {
+pub async fn hash_password_async(pw: String) -> AppResult<String> {
     tokio::task::spawn_blocking(move || hash_password(&pw))
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?
@@ -162,6 +162,8 @@ struct RegisterReq {
     role: String, // "customer" or "seller"
     business_name: Option<String>,
     referral_code: Option<String>,
+    accept_terms: Option<bool>,
+    accept_seller: Option<bool>,
 }
 
 async fn register(State(s): State<AppState>, Json(r): Json<RegisterReq>) -> AppResult<Json<Value>> {
@@ -170,6 +172,12 @@ async fn register(State(s): State<AppState>, Json(r): Json<RegisterReq>) -> AppR
     }
     if r.role != "customer" && r.role != "seller" {
         return Err(AppError::BadRequest("Role must be customer or seller".into()));
+    }
+    if r.accept_terms != Some(true) {
+        return Err(AppError::BadRequest("Please accept the Terms & Conditions and Privacy Policy".into()));
+    }
+    if r.role == "seller" && r.accept_seller != Some(true) {
+        return Err(AppError::BadRequest("Please accept the Seller Agreement".into()));
     }
     if r.full_name.trim().is_empty() || r.phone.trim().is_empty() || !r.email.contains('@') {
         return Err(AppError::BadRequest("Name, phone and a valid email are required".into()));
@@ -192,8 +200,8 @@ async fn register(State(s): State<AppState>, Json(r): Json<RegisterReq>) -> AppR
 
     let mut tx = s.db.begin().await?;
     let user: UserOut = sqlx::query_as(
-        "INSERT INTO users (full_name, email, phone, password_hash, role, referral_code, referred_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        "INSERT INTO users (full_name, email, phone, password_hash, role, referral_code, referred_by, terms_accepted_at, terms_version)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, now(), '2026-10-09')
          RETURNING id, full_name, email, phone, role, referral_code",
     )
     .bind(r.full_name.trim())
@@ -271,6 +279,14 @@ async fn login(State(s): State<AppState>, Json(r): Json<LoginReq>) -> AppResult<
     }
     if !row.email_verified {
         return Err(AppError::EmailNotVerified(row.email));
+    }
+    
+    let suspended: bool = sqlx::query_scalar("SELECT suspended_at IS NOT NULL FROM users WHERE id = $1")
+        .bind(row.id)
+        .fetch_one(&s.db)
+        .await?;
+    if suspended {
+        return Err(AppError::Suspended);
     }
 
     let token = create_token(row.id, &row.role, &s.config.jwt_secret)?;

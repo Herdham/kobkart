@@ -276,7 +276,7 @@ export default function GroupDetail() {
                     <b>{m.name}{m.is_me && ' (you)'}</b>
                     <small>{m.paid_count}/{rounds.length} contributions</small>
                   </div>
-                  <span className={`bd ${m.late ? 'late' : 'ontrack'}`}>{m.late ? 'Late' : 'Up to date'}</span>
+                  <span className={`bd ${m.defaulted ? 'defaulted' : m.late ? 'late' : 'ontrack'}`}>{m.defaulted ? 'Defaulted' : m.late ? 'Late' : 'Up to date'}</span>
                   {owner && m.late && m.phone && (
                     <a
                       className="db-remind"

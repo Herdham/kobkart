@@ -19,7 +19,10 @@ import SellerPayments from './pages/SellerPayments'
 import Browse from './pages/Browse'
 import GroupDetail from './pages/GroupDetail'
 import Legal from './pages/Legal'
+import Settings from './pages/Settings'
 import { getSession } from './api/auth'
+import MyOrders from './pages/MyOrders'
+import AdminUsers from './pages/AdminUsers'
 
 function RequireRole({ role, children }) {
   const s = getSession()
@@ -57,6 +60,9 @@ export default function App() {
           <Route path="/terms" element={<Legal doc="terms" />} />
       <Route path="/privacy" element={<Legal doc="privacy" />} />
       <Route path="/seller-agreement" element={<Legal doc="seller" />} />
+          <Route path="/settings" element={<RequireRole><Settings /></RequireRole>} />
+          <Route path="/my-orders" element={<RequireRole role="customer"><MyOrders /></RequireRole>} />
+      <Route path="/admin/users" element={<RequireRole role="admin"><AdminUsers /></RequireRole>} />
     </Routes>
   )
 }

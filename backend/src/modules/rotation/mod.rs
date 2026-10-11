@@ -124,6 +124,7 @@ async fn overview(u: AuthUser, State(s): State<AppState>, Path(id): Path<Uuid>) 
     let today = Utc::now().date_naive();
     let running = g.rotation_status != "open";
     let due_rounds = rounds.iter().filter(|r| r.due_date < today).count() as i64;
+    let overdue_rounds = rounds.iter().filter(|r| r.due_date < today - Duration::days(3)).count() as i64;
 
     let member_json: Vec<Value> = members
         .iter()
@@ -131,6 +132,7 @@ async fn overview(u: AuthUser, State(s): State<AppState>, Path(id): Path<Uuid>) 
             let phone = if is_owner { Some(m.phone.clone()) } else { None };
             let plan_id = if is_owner || m.user_id == u.id { Some(m.plan_id) } else { None };
             let late = running && m.paid_count < due_rounds;
+            let defaulted = running && m.paid_count < overdue_rounds;
             json!({
                 "id": m.id,
                 "position": m.position,
@@ -141,6 +143,7 @@ async fn overview(u: AuthUser, State(s): State<AppState>, Path(id): Path<Uuid>) 
                 "amount_paid": m.amount_paid,
                 "next_due_date": m.next_due_date,
                 "late": late,
+                "defaulted": defaulted,
                 "is_me": m.user_id == u.id
             })
         })
@@ -195,8 +198,19 @@ async fn overview(u: AuthUser, State(s): State<AppState>, Path(id): Path<Uuid>) 
 }
 
 /// A customer takes a place in an open group.
-async fn join(u: AuthUser, State(s): State<AppState>, Path(id): Path<Uuid>) -> AppResult<Json<Value>> {
+#[derive(Deserialize)]
+struct JoinReq {
+    commitment: Option<bool>,
+}
+
+async fn join(u: AuthUser, State(s): State<AppState>, Path(id): Path<Uuid>, Json(b): Json<JoinReq>) -> AppResult<Json<Value>> {
     u.require("customer")?;
+    if b.commitment != Some(true) {
+        return Err(AppError::BadRequest("Please confirm that you will keep paying every round.".into()));
+    }
+    if has_defaulted(&s, u.id).await? {
+        return Err(AppError::BadRequest("You have overdue payments in another group. Please catch up before joining a new one.".into()));
+    }
     let mut tx = s.db.begin().await?;
 
     let row: Option<(i64, i32, Option<i32>, Option<NaiveDate>, String, String)> = sqlx::query_as(
@@ -244,7 +258,7 @@ async fn join(u: AuthUser, State(s): State<AppState>, Path(id): Path<Uuid>) -> A
     .bind(due)
     .fetch_one(&mut *tx)
     .await?;
-    sqlx::query("INSERT INTO rotation_members (channel_id, user_id, plan_id, position) VALUES ($1, $2, $3, $4)")
+    sqlx::query("INSERT INTO rotation_members (channel_id, user_id, plan_id, position, committed_at) VALUES ($1, $2, $3, $4, now())")
         .bind(id)
         .bind(u.id)
         .bind(plan_id)
@@ -445,4 +459,21 @@ async fn collections(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<V
     .fetch_all(&s.db)
     .await?;
     Ok(Json(rows))
+}
+
+/// True if the person is more than 3 days behind in a running group.
+pub async fn has_defaulted(s: &AppState, user_id: Uuid) -> AppResult<bool> {
+    let d: bool = sqlx::query_scalar(
+        "SELECT EXISTS (
+           SELECT 1 FROM rotation_members m
+           JOIN channels c ON c.id = m.channel_id AND c.rotation_status = 'running'
+           WHERE m.user_id = $1
+             AND (SELECT COUNT(*) FROM rotation_rounds r WHERE r.channel_id = m.channel_id AND r.due_date < CURRENT_DATE - 3)
+               > (SELECT COUNT(*) FROM payments py WHERE py.plan_id = m.plan_id AND py.status = 'success')
+         )",
+    )
+    .bind(user_id)
+    .fetch_one(&s.db)
+    .await?;
+    Ok(d)
 }

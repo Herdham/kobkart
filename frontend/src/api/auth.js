@@ -69,7 +69,7 @@ export async function login({ identifier, password, remember }) {
   return session
 }
 
-export async function register({ full_name, email, phone, password, role, business_name, referral_code }) {
+export async function register({ full_name, email, phone, password, role, business_name, referral_code, accept_terms, accept_seller }) {
   if (IS_MOCK) {
     await wait()
     sessionStorage.setItem(
@@ -78,7 +78,7 @@ export async function register({ full_name, email, phone, password, role, busine
     )
     return { email }
   }
-  return post('/auth/register', { full_name, email, phone, password, role, business_name, referral_code })
+  return post('/auth/register', { full_name, email, phone, password, role, business_name, referral_code, accept_terms, accept_seller })
 }
 
 export async function sendCode({ email, purpose }) {

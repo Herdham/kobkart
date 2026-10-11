@@ -50,6 +50,8 @@ export default function Register() {
         phone: form.phone.trim(),
         password: form.password,
         role,
+        accept_terms: true,
+        accept_seller: isSeller ? true : undefined,
         referral_code: form.referral.trim() || undefined,
       })
       nav('/verify-email', { state: { email, purpose: 'verify' } })

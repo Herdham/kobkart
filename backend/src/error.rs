@@ -14,6 +14,7 @@ pub enum AppError {
     Conflict(String),
     Internal(String),
     EmailNotVerified(String),
+    Suspended,
 }
 
 pub type AppResult<T> = Result<T, AppError>;
@@ -35,6 +36,10 @@ impl IntoResponse for AppError {
             AppError::BadRequest(m) => (StatusCode::BAD_REQUEST, m),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Please log in".to_string()),
             AppError::Forbidden => (StatusCode::FORBIDDEN, "You are not allowed to do this".to_string()),
+            AppError::Suspended => (
+                StatusCode::FORBIDDEN,
+                "Your account has been suspended. Please contact Kobkart support.".to_string(),
+            ),
             AppError::NotFound => (StatusCode::NOT_FOUND, "Not found".to_string()),
             AppError::Conflict(m) => (StatusCode::CONFLICT, m),
             AppError::Internal(m) => {

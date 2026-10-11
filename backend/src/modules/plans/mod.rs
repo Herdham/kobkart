@@ -82,6 +82,9 @@ struct StartPlan {
 /// Customer picks a product: price is locked and the schedule starts.
 async fn start_plan(u: AuthUser, State(s): State<AppState>, Json(b): Json<StartPlan>) -> AppResult<Json<Value>> {
     u.require("customer")?;
+    if crate::modules::rotation::has_defaulted(&s, u.id).await? {
+        return Err(AppError::BadRequest("You have overdue payments in a group. Please catch up before joining a new package.".into()));
+    }
     let (channel_id, price, contribution, freq, active): (Uuid, i64, i64, i32, bool) = sqlx::query_as(
         "SELECT p.channel_id, p.price, c.contribution_amount, c.frequency_days, p.active
          FROM products p JOIN channels c ON c.id = p.channel_id WHERE p.id = $1",

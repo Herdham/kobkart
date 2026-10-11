@@ -19,6 +19,7 @@ export default function Join() {
   const [pick, setPick] = useState(null)
   const [joining, setJoining] = useState(false)
   const [msg, setMsg] = useState('')
+  const [commit, setCommit] = useState(false)
 
   useEffect(() => {
     if (!code) return
@@ -63,7 +64,12 @@ export default function Join() {
     setMsg('')
     try {
       if (pick.group) {
-        await api(`/rotation/${ch.id}/join`, { method: 'POST' })
+        if (!commit) {
+          setMsg('Please tick the box to confirm your commitment.')
+          setJoining(false)
+          return
+        }
+        await api(`/rotation/${ch.id}/join`, { method: 'POST', body: { commitment: true } })
         nav(`/groups/${ch.id}`, { replace: true })
       } else {
         await api('/plans', { method: 'POST', body: { product_id: pick.id } })
@@ -221,6 +227,10 @@ export default function Join() {
                   <div><span>Pot per round</span><b>{naira(rot.pot)}</b></div>
                   <div><span>Your turn</span><b>Set by the seller</b></div>
                 </div>
+                <label className="check terms">
+                  <input type="checkbox" checked={commit} onChange={(e) => setCommit(e.target.checked)} />
+                  <span>I promise to pay every round until the group ends, even after I have collected. If I fall behind I may be marked Defaulted and blocked from joining other packages.</span>
+                </label>
                 {msg && <div className="alert">{msg}</div>}
                 <div className="fm-actions">
                   <button className="db-btn" onClick={confirmJoin} disabled={joining}>{joining ? 'Joining...' : 'Confirm & join'}</button>

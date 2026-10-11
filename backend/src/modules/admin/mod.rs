@@ -5,7 +5,7 @@ use crate::{
     state::AppState,
 };
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     routing::{get, put},
     Json, Router,
 };
@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sqlx::FromRow;
 use uuid::Uuid;
+use chrono::{DateTime, Utc}; 
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -20,6 +21,8 @@ pub fn routes() -> Router<AppState> {
         .route("/admin/sellers", get(sellers))
         .route("/admin/sellers/{id}/verify", put(verify_seller))
         .route("/admin/payments", get(payments))
+        .route("/admin/users", get(users))
+        .route("/admin/users/{id}/suspend", put(suspend_user))
 }
 
 #[derive(Serialize, FromRow)]
@@ -31,6 +34,13 @@ struct AdminSeller {
     email: String,
     phone: String,
     payout_ready: bool,
+    location: Option<String>,
+    bio: Option<String>,
+    instagram: Option<String>,
+    facebook: Option<String>,
+    x_handle: Option<String>,
+    website: Option<String>,
+    whatsapp: Option<String>,
 }
 
 async fn overview(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<Value>> {
@@ -58,7 +68,7 @@ async fn overview(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<Valu
 async fn sellers(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<Vec<AdminSeller>>> {
     u.require("admin")?;
     let rows: Vec<AdminSeller> = sqlx::query_as(
-        "SELECT s.user_id, s.business_name, s.verified, us.full_name, us.email, us.phone,
+        "SELECT s.user_id, s.business_name, s.verified, us.full_name, us.email, us.phone, us.location, us.bio, us.instagram, us.facebook, us.x_handle, us.website, us.whatsapp,
                 (s.paystack_subaccount_code IS NOT NULL) AS payout_ready
          FROM sellers s JOIN users us ON us.id = s.user_id
          ORDER BY s.verified, s.created_at DESC",
@@ -99,4 +109,84 @@ async fn payments(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<Vec<
     .fetch_all(&s.db)
     .await?;
     Ok(Json(rows))
+}
+
+#[derive(Deserialize)]
+struct UsersQ {
+    q: Option<String>,
+    role: Option<String>,
+}
+
+#[derive(Serialize, FromRow)]
+struct AdminUser {
+    id: Uuid,
+    full_name: String,
+    email: String,
+    phone: String,
+    role: String,
+    email_verified: bool,
+    suspended: bool,
+    suspended_reason: Option<String>,
+    created_at: DateTime<Utc>,
+    business_name: Option<String>,
+}
+
+async fn users(u: AuthUser, State(s): State<AppState>, Query(q): Query<UsersQ>) -> AppResult<Json<Vec<AdminUser>>> {
+    u.require("admin")?;
+    let pattern = q
+        .q
+        .as_deref()
+        .map(|t| t.trim().replace(['%', '_', '\\'], ""))
+        .filter(|t| !t.is_empty())
+        .map(|t| format!("%{t}%"));
+    let role = q.role.filter(|r| ["customer", "seller", "admin"].contains(&r.as_str()));
+    let rows: Vec<AdminUser> = sqlx::query_as(
+        "SELECT us.id, us.full_name, us.email, us.phone, us.role, us.email_verified,
+                (us.suspended_at IS NOT NULL) AS suspended, us.suspended_reason, us.created_at, sl.business_name
+         FROM users us LEFT JOIN sellers sl ON sl.user_id = us.id
+         WHERE ($1::text IS NULL OR us.role = $1)
+           AND ($2::text IS NULL OR us.full_name ILIKE $2 OR us.email ILIKE $2 OR us.phone ILIKE $2 OR sl.business_name ILIKE $2)
+         ORDER BY us.created_at DESC LIMIT 200",
+    )
+    .bind(role)
+    .bind(pattern)
+    .fetch_all(&s.db)
+    .await?;
+    Ok(Json(rows))
+}
+
+#[derive(Deserialize)]
+struct SuspendReq {
+    suspended: bool,
+    reason: Option<String>,
+}
+
+async fn suspend_user(
+    u: AuthUser,
+    State(s): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(b): Json<SuspendReq>,
+) -> AppResult<Json<Value>> {
+    u.require("admin")?;
+    if id == u.id {
+        return Err(AppError::BadRequest("You cannot suspend your own account".into()));
+    }
+    let role: String = sqlx::query_scalar("SELECT role FROM users WHERE id = $1")
+        .bind(id)
+        .fetch_one(&s.db)
+        .await?;
+    if role == "admin" {
+        return Err(AppError::BadRequest("Admin accounts cannot be suspended here".into()));
+    }
+    sqlx::query(
+        "UPDATE users SET suspended_at = CASE WHEN $1 THEN now() ELSE NULL END,
+                suspended_reason = CASE WHEN $1 THEN $2 ELSE NULL END
+         WHERE id = $3",
+    )
+    .bind(b.suspended)
+    .bind(b.reason.map(|r| r.trim().to_string()).filter(|r| !r.is_empty()))
+    .bind(id)
+    .execute(&s.db)
+    .await?;
+    Ok(Json(json!({ "ok": true })))
 }
