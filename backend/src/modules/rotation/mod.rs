@@ -46,13 +46,14 @@ struct Grp {
 #[derive(FromRow)]
 struct MemberRow {
     id: Uuid,
-    user_id: Uuid,
+    user_id: Option<Uuid>,
     plan_id: Uuid,
     position: i32,
     name: String,
     phone: String,
     amount_paid: i64,
     next_due_date: NaiveDate,
+    claim_token: Option<String>,
     paid_count: i64,
 }
 
@@ -91,11 +92,11 @@ async fn owner_group(s: &AppState, u: &AuthUser, id: Uuid) -> AppResult<Grp> {
 async fn overview(u: AuthUser, State(s): State<AppState>, Path(id): Path<Uuid>) -> AppResult<Json<Value>> {
     let g = load_group(&s, id).await?;
     let members: Vec<MemberRow> = sqlx::query_as(
-        "SELECT m.id, m.user_id, m.plan_id, m.position, u.full_name AS name, u.phone,
-                p.amount_paid, p.next_due_date,
+        "SELECT m.id, m.user_id, m.plan_id, m.position, COALESCE(u.full_name, p.guest_name) AS name, COALESCE(u.phone, p.guest_phone) AS phone,
+                p.amount_paid, p.next_due_date, (CASE WHEN m.user_id IS NULL THEN p.claim_token END) AS claim_token,
                 (SELECT COUNT(*) FROM payments py WHERE py.plan_id = p.id AND py.status = 'success') AS paid_count
          FROM rotation_members m
-         JOIN users u ON u.id = m.user_id
+         LEFT JOIN users u ON u.id = m.user_id
          JOIN plans p ON p.id = m.plan_id
          WHERE m.channel_id = $1
          ORDER BY m.position",
@@ -105,7 +106,7 @@ async fn overview(u: AuthUser, State(s): State<AppState>, Path(id): Path<Uuid>) 
     .await?;
 
     let is_owner = g.seller_id == u.id;
-    let me_id = members.iter().find(|m| m.user_id == u.id).map(|m| m.id);
+    let me_id = members.iter().find(|m| m.user_id == Some(u.id)).map(|m| m.id);
     if !is_owner && me_id.is_none() && u.role != "admin" {
         return Err(AppError::Forbidden);
     }
@@ -130,7 +131,7 @@ async fn overview(u: AuthUser, State(s): State<AppState>, Path(id): Path<Uuid>) 
         .iter()
         .map(|m| {
             let phone = if is_owner { Some(m.phone.clone()) } else { None };
-            let plan_id = if is_owner || m.user_id == u.id { Some(m.plan_id) } else { None };
+            let plan_id = if is_owner || m.user_id == Some(u.id) { Some(m.plan_id) } else { None };
             let late = running && m.paid_count < due_rounds;
             let defaulted = running && m.paid_count < overdue_rounds;
             json!({
@@ -144,7 +145,9 @@ async fn overview(u: AuthUser, State(s): State<AppState>, Path(id): Path<Uuid>) 
                 "next_due_date": m.next_due_date,
                 "late": late,
                 "defaulted": defaulted,
-                "is_me": m.user_id == u.id
+                "is_me": m.user_id == Some(u.id),
+                "is_guest": m.user_id.is_none(),
+                "claim_token": if is_owner { m.claim_token.clone() } else { None }
             })
         })
         .collect();
@@ -443,7 +446,7 @@ async fn collections(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<V
     u.require("seller")?;
     let rows: Vec<CollectionRow> = sqlx::query_as(
         "SELECT c.id AS channel_id, c.name AS channel_name, r.round_no, r.due_date, r.collected,
-                u.full_name AS collector_name, u.phone AS collector_phone,
+                COALESCE(u.full_name, mp.guest_name) AS collector_name, COALESCE(u.phone, mp.guest_phone) AS collector_phone,
                 (c.contribution_amount * (SELECT COUNT(*) FROM rotation_members x WHERE x.channel_id = c.id))::BIGINT AS pot,
                 (SELECT COUNT(*) FROM rotation_members m3 WHERE m3.channel_id = c.id
                    AND (SELECT COUNT(*) FROM payments py WHERE py.plan_id = m3.plan_id AND py.status = 'success') >= r.round_no) AS paid_count,
@@ -451,7 +454,8 @@ async fn collections(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<V
          FROM rotation_rounds r
          JOIN channels c ON c.id = r.channel_id
          JOIN rotation_members m ON m.channel_id = r.channel_id AND m.position = r.round_no
-         JOIN users u ON u.id = m.user_id
+         JOIN plans mp ON mp.id = m.plan_id
+         LEFT JOIN users u ON u.id = m.user_id
          WHERE c.seller_id = $1 AND c.kind = 'rotation'
          ORDER BY r.collected, r.due_date",
     )

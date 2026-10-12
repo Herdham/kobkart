@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Wallet } from 'lucide-react'
 import DashboardLayout from '../components/DashboardLayout'
@@ -13,15 +13,35 @@ export default function SellerPayments() {
   const [data, setData] = useState(null)
   const [biz, setBiz] = useState('Seller')
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState('')
+
+  const load = useCallback(
+    () =>
+      Promise.all([api('/payments'), api('/seller/plans'), api('/seller/profile')])
+        .then(([payments, plans, pr]) => {
+          setData({ payments, plans })
+          setBiz(pr.business_name)
+        })
+        .catch((e) => (e.status === 401 ? nav('/login', { replace: true }) : setError(e.message))),
+    [nav]
+  )
 
   useEffect(() => {
-    Promise.all([api('/payments'), api('/seller/plans'), api('/seller/profile')])
-      .then(([payments, plans, pr]) => {
-        setData({ payments, plans })
-        setBiz(pr.business_name)
-      })
-      .catch((e) => (e.status === 401 ? nav('/login', { replace: true }) : setError(e.message)))
-  }, [nav])
+    load()
+  }, [load])
+
+  async function voidPayment(r) {
+    if (!window.confirm(`Void this ${naira(r.amount)} payment you recorded? The member's balance goes back up.`)) return
+    setBusy(r.id)
+    try {
+      await api(`/seller/payments/${r.id}/void`, { method: 'POST' })
+      await load()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy('')
+    }
+  }
 
   const rows = data?.payments || []
   const byPlan = Object.fromEntries((data?.plans || []).map((p) => [p.id, p]))
@@ -36,7 +56,7 @@ export default function SellerPayments() {
         <div className="db-page-head">
           <div>
             <h1>Payments</h1>
-            <p className="muted">Every payment your customers have made into your packages.</p>
+            <p className="muted">Every payment into your packages, online and the ones you recorded yourself.</p>
           </div>
         </div>
 
@@ -48,7 +68,7 @@ export default function SellerPayments() {
             <div className="mini-stats">
               <div className="db-card db-stat"><p>Total collected</p><b className="red">{naira(gross)}</b></div>
               <div className="db-card db-stat"><p>Kobkart fee</p><b>{naira(fees)}</b></div>
-              <div className="db-card db-stat"><p>You receive</p><b>{naira(gross - fees)}</b><small>Paystack's processing charge is taken from your payout.</small></div>
+              <div className="db-card db-stat"><p>You receive</p><b>{naira(gross - fees)}</b><small>Online payments also lose Paystack's processing charge.</small></div>
               <div className="db-card db-stat"><p>Pending</p><b>{pending}</b></div>
             </div>
 
@@ -57,18 +77,19 @@ export default function SellerPayments() {
                 <div className="db-empty">
                   <Wallet size={30} />
                   <b>No payments yet</b>
-                  <p>When customers pay, you will see every payment here.</p>
+                  <p>When customers pay, or you record a payment, it shows here.</p>
                 </div>
               ) : (
                 <div className="db-table-wrap">
                   <table>
                     <thead>
-                      <tr><th>Date</th><th>Customer</th><th>Item</th><th>Amount</th><th>Fee</th><th>Status</th><th>Reference</th></tr>
+                      <tr><th>Date</th><th>Customer</th><th>Item</th><th>Amount</th><th>Fee</th><th>Status</th><th>Method</th><th>Reference</th><th></th></tr>
                     </thead>
                     <tbody>
                       {rows.map((r) => {
                         const plan = byPlan[r.plan_id]
                         const [label, tone] = CHIP[r.status] || [r.status, 'completed']
+                        const manual = r.method && r.method !== 'online'
                         return (
                           <tr key={r.id}>
                             <td>{shortDate(r.paid_at || r.created_at)}</td>
@@ -77,7 +98,13 @@ export default function SellerPayments() {
                             <td>{naira(r.amount)}</td>
                             <td>{naira(r.platform_fee)}</td>
                             <td><span className={`bd ${tone}`}>{label}</span></td>
+                            <td>{manual ? `Recorded (${r.method})` : 'Online'}</td>
                             <td>{r.reference.slice(-10)}</td>
+                            <td>
+                              {manual && r.status === 'success' && (
+                                <button className="db-btn sm danger" disabled={busy === r.id} onClick={() => voidPayment(r)}>Void</button>
+                              )}
+                            </td>
                           </tr>
                         )
                       })}

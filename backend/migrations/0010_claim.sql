@@ -1,0 +1,1 @@
+ALTER TABLE plans ADD COLUMN claim_token TEXT UNIQUE DEFAULT md5(gen_random_uuid()::text);

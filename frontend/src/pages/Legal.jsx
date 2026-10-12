@@ -108,7 +108,7 @@ const DOCS = {
         'If you cannot deliver, you must refund the customer promptly for anything not delivered. If you ignore a customer, we may suspend your account, share payment records with the customer, and share them with the authorities when the law requires it.',
       ] },
       { h: '7. Customer information', p: [
-        'You may use your customers\' names and phone numbers only to run the package, such as reminders and delivery. Do not sell, share or spam with this information, and keep it safe.',
+        'You may use your customers\' names and phone numbers only to run the package, such as reminders and delivery. Do not sell, share or spam with this information, and keep it safe. If you add someone who has not signed up themselves, you confirm that they agreed to be added and to have their name and phone number kept here.',
       ] },
       { h: '8. Suspension', p: [
         'We may hide or remove a package, or suspend your account, if customers are at risk or if you break this agreement.',

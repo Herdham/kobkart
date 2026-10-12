@@ -9,3 +9,5 @@ pub mod sellers;
 pub mod rotation;
 pub mod account;
 pub mod orders;
+pub mod manual;
+pub mod jobs;

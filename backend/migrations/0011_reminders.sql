@@ -1,0 +1,1 @@
+CREATE TABLE reminder_log (key TEXT PRIMARY KEY, sent_at TIMESTAMPTZ NOT NULL DEFAULT now());

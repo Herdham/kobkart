@@ -64,6 +64,8 @@ struct SellerPlanView {
     status: String,
     kind: String,
     late: bool,
+    is_guest: bool,
+    claim_token: Option<String>,
 }
 
 pub fn routes() -> Router<AppState> {
@@ -131,13 +133,13 @@ async fn my_plans(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<Vec<
 }
 
 async fn plan_detail(u: AuthUser, State(s): State<AppState>, Path(id): Path<Uuid>) -> AppResult<Json<Value>> {
-    let (customer_id, seller_id): (Uuid, Uuid) = sqlx::query_as(
+    let (customer_id, seller_id): (Option<Uuid>, Uuid) = sqlx::query_as(
         "SELECT p.customer_id, c.seller_id FROM plans p JOIN channels c ON c.id = p.channel_id WHERE p.id = $1",
     )
     .bind(id)
     .fetch_one(&s.db)
     .await?;
-    if u.id != customer_id && u.id != seller_id && u.role != "admin" {
+    if Some(u.id) != customer_id && u.id != seller_id && u.role != "admin" {
         return Err(AppError::Forbidden);
     }
     let plan: PlanView = sqlx::query_as(&format!("{PLAN_SELECT} WHERE p.id = $1"))
@@ -175,13 +177,13 @@ async fn seller_plans(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<
     u.require("seller")?;
     let rows: Vec<SellerPlanView> = sqlx::query_as(
         "SELECT p.id, p.channel_id, c.name AS channel_name,
-                us.full_name AS customer_name, us.phone AS customer_phone,
+                COALESCE(us.full_name, p.guest_name) AS customer_name, COALESCE(us.phone, p.guest_phone) AS customer_phone, (p.customer_id IS NULL) AS is_guest, (CASE WHEN p.customer_id IS NULL THEN p.claim_token END) AS claim_token,
                 COALESCE(pr.name, c.name) AS product_name,
                 p.locked_price, p.installment_amount, p.amount_paid, p.next_due_date, p.status, c.kind,
                 (p.status = 'active' AND p.next_due_date < CURRENT_DATE) AS late
          FROM plans p
          JOIN channels c ON c.id = p.channel_id
-         JOIN users us ON us.id = p.customer_id
+         LEFT JOIN users us ON us.id = p.customer_id
          LEFT JOIN products pr ON pr.id = p.product_id
          WHERE c.seller_id = $1
          ORDER BY late DESC, p.next_due_date",

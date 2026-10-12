@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowDown, ArrowLeft, ArrowUp, Link2, MessageCircle, Users, X } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, Copy, Link2, MessageCircle, UserPlus, Users, X } from 'lucide-react'
 import DashboardLayout from '../components/DashboardLayout'
 import ListingToggle from '../components/ListingToggle'
 import { API, api } from '../api/http'
 import { getSession } from '../api/auth'
 import { naira, shortDate, whatsappLink } from '../api/seller'
 import { startPayment } from '../api/customer'
+import { groupList } from '../api/whatsappList'
 import './dashboard.css'
 
 export default function GroupDetail() {
@@ -19,6 +20,7 @@ export default function GroupDetail() {
   const [order, setOrder] = useState(null)
   const [startDate, setStartDate] = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10))
   const [busy, setBusy] = useState('')
+  const [guest, setGuest] = useState({ open: false, name: '', phone: '' })
 
   const say = (m) => {
     setToast(m)
@@ -45,8 +47,10 @@ export default function GroupDetail() {
       await fn()
       if (ok) say(ok)
       await load()
+      return true
     } catch (e) {
       say(e.message)
+      return false
     } finally {
       setBusy('')
     }
@@ -81,6 +85,23 @@ export default function GroupDetail() {
         say(link)
       }
     }
+    const copyClaim = async (m) => {
+      const text = `${window.location.origin}/claim/${m.claim_token}`
+      try {
+        await navigator.clipboard.writeText(text)
+        say(`Link copied. Send it only to ${m.name}.`)
+      } catch {
+        say(text)
+      }
+    }
+    const copyList = async () => {
+      try {
+        await navigator.clipboard.writeText(groupList(data, link))
+        say('WhatsApp list copied. Paste it in your group.')
+      } catch {
+        say('Could not copy the list')
+      }
+    }
     const pay = async () => {
       setBusy('pay')
       try {
@@ -89,6 +110,23 @@ export default function GroupDetail() {
         say(e.message)
         setBusy('')
       }
+    }
+    async function addGuest(e) {
+      e.preventDefault()
+      const ok = await run('guest', () => api(`/rotation/${id}/guests`, { method: 'POST', body: { name: guest.name, phone: guest.phone } }), 'Member added')
+      if (ok) setGuest({ open: false, name: '', phone: '' })
+    }
+    async function recordPayment(m) {
+      const method = window.prompt(
+        `How did ${m.name} pay ${naira(ch.contribution_amount)} for round ${m.paid_count + 1}? Type transfer, cash or other:`,
+        'transfer'
+      )
+      if (!method) return
+      await run(
+        'pay' + m.id,
+        () => api('/seller/payments/manual', { method: 'POST', body: { plan_id: m.plan_id, amount: ch.contribution_amount, method: method.trim().toLowerCase() } }),
+        'Payment recorded'
+      )
     }
     const wa = `https://wa.me/?text=${encodeURIComponent(
       `Join my group "${ch.name}" on Kobkart. ${naira(ch.contribution_amount)} every ${ch.frequency_days} days: ${link}`
@@ -119,6 +157,7 @@ export default function GroupDetail() {
                 <span className="pd-code">Code: {ch.invite_code}</span>
                 <div className="pd-actions">
                   <button className="db-btn" onClick={copy}><Link2 size={16} /> Copy link</button>
+                  <button className="db-btn ghost" onClick={copyList}><Copy size={16} /> Copy WhatsApp list</button>
                   <a className="db-btn ghost" href={wa} target="_blank" rel="noreferrer"><MessageCircle size={16} /> Share on WhatsApp</a>
                 </div>
                 <ListingToggle channel={ch} onSaved={load} />
@@ -127,7 +166,6 @@ export default function GroupDetail() {
           </div>
         </section>
 
-        {/* member's own turn + pay */}
         {me && !owner && (
           open ? (
             <section className="turn-card">
@@ -154,7 +192,6 @@ export default function GroupDetail() {
           )
         )}
 
-        {/* seller: before start */}
         {owner && open && (
           <>
             <section className="db-card">
@@ -170,7 +207,7 @@ export default function GroupDetail() {
                 <div className="db-empty">
                   <Users size={30} />
                   <b>No members yet</b>
-                  <p>Share the link above. Members appear here when they join. Then arrange who collects first.</p>
+                  <p>Share the link above, or add people from your WhatsApp list below. Then arrange who collects first.</p>
                 </div>
               ) : (
                 <>
@@ -180,8 +217,14 @@ export default function GroupDetail() {
                   {list.map((m, i) => (
                     <div className="mb-row" key={m.id}>
                       <span className="rd-no">{i + 1}</span>
-                      <div className="rd-main"><b>{m.name}</b><small>{m.phone}</small></div>
+                      <div className="rd-main">
+                        <b>{m.name} {m.is_guest && <span className="bd cancelled">No account</span>}</b>
+                        <small>{m.phone}</small>
+                      </div>
                       <div className="row-actions">
+                          {m.is_guest && m.claim_token && (
+                          <button className="ic-btn" onClick={() => copyClaim(m)} aria-label="Copy link for this person"><Link2 size={16} /></button>
+                        )}
                         <button className="ic-btn" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Move up"><ArrowUp size={16} /></button>
                         <button className="ic-btn" disabled={i === list.length - 1} onClick={() => move(i, 1)} aria-label="Move down"><ArrowDown size={16} /></button>
                         <button
@@ -196,6 +239,30 @@ export default function GroupDetail() {
                   ))}
                 </>
               )}
+
+              {members.length < ch.slots && (
+                <div style={{ marginTop: 14 }}>
+                  {guest.open ? (
+                    <form className="fm" onSubmit={addGuest}>
+                      <p className="muted small" style={{ margin: 0 }}>
+                        For a member who has not signed up. They will not see anything in the app until they join with their own account.
+                      </p>
+                      <div className="fm-row">
+                        <label>Name<input value={guest.name} onChange={(e) => setGuest({ ...guest, name: e.target.value })} /></label>
+                        <label>Phone<input type="tel" value={guest.phone} onChange={(e) => setGuest({ ...guest, phone: e.target.value })} /></label>
+                      </div>
+                      <div className="fm-actions">
+                        <button className="db-btn sm" disabled={busy === 'guest'}>{busy === 'guest' ? 'Adding...' : 'Add member'}</button>
+                        <button type="button" className="db-btn sm ghost" onClick={() => setGuest({ open: false, name: '', phone: '' })}>Cancel</button>
+                      </div>
+                    </form>
+                  ) : (
+                    <button className="db-btn sm ghost" onClick={() => setGuest({ ...guest, open: true })}>
+                      <UserPlus size={14} /> Add someone without an account
+                    </button>
+                  )}
+                </div>
+              )}
             </section>
 
             <section className="db-card">
@@ -203,6 +270,7 @@ export default function GroupDetail() {
               <p className="muted small" style={{ margin: '0 0 12px', lineHeight: 1.6 }}>
                 Round 1 is collected on the date you choose, then a new round every {ch.frequency_days} days. Everyone pays {naira(ch.contribution_amount)} by each round's date.
                 {members.length >= 2 && ` With ${members.length} members the pot is ${naira(ch.contribution_amount * members.length)} per round.`}
+                {members.length < ch.slots && ` Only ${members.length} of ${ch.slots} places are filled, so starting now makes it a group of ${members.length}.`}
                 {' '}Once you start, the order and members are locked.
               </p>
               <div className="start-box">
@@ -213,7 +281,13 @@ export default function GroupDetail() {
                 <button
                   className="db-btn"
                   disabled={members.length < 2 || !!order || busy === 'start'}
-                  onClick={() => window.confirm('Start this group now? The order will be locked.') && run('start', () => api(`/rotation/${id}/start`, { method: 'POST', body: { start_date: startDate } }), 'Group started')}
+                  onClick={() =>
+                    window.confirm(
+                      members.length < ch.slots
+                        ? `Only ${members.length} of ${ch.slots} places are filled. If you start now, this becomes a group of ${members.length} and nobody else can join. Start anyway?`
+                        : 'Start this group now? The order will be locked.'
+                    ) && run('start', () => api(`/rotation/${id}/start`, { method: 'POST', body: { start_date: startDate } }), 'Group started')
+                  }
                 >
                   {busy === 'start' ? 'Starting...' : 'Start group'}
                 </button>
@@ -224,7 +298,6 @@ export default function GroupDetail() {
           </>
         )}
 
-        {/* member: before start sees the order */}
         {!owner && open && (
           <section className="db-card">
             <div className="db-card-head"><h2>Members</h2></div>
@@ -237,7 +310,6 @@ export default function GroupDetail() {
           </section>
         )}
 
-        {/* running / finished: the round tracker */}
         {!open && (
           <>
             <section className="db-card">
@@ -273,10 +345,18 @@ export default function GroupDetail() {
                 <div className="mb-row" key={m.id}>
                   <span className="rd-no">{m.position}</span>
                   <div className="rd-main">
-                    <b>{m.name}{m.is_me && ' (you)'}</b>
+                    <b>{m.name}{m.is_me && ' (you)'} {m.is_guest && <span className="bd cancelled">No account</span>}</b>
                     <small>{m.paid_count}/{rounds.length} contributions</small>
                   </div>
                   <span className={`bd ${m.defaulted ? 'defaulted' : m.late ? 'late' : 'ontrack'}`}>{m.defaulted ? 'Defaulted' : m.late ? 'Late' : 'Up to date'}</span>
+                  {owner && m.is_guest && m.claim_token && (
+                    <button className="ic-btn" onClick={() => copyClaim(m)} aria-label="Copy link for this person"><Link2 size={16} /></button>
+                  )}
+                  {owner && m.plan_id && m.paid_count < rounds.length && (
+                    <button className="db-btn sm ghost" disabled={busy === 'pay' + m.id} onClick={() => recordPayment(m)}>
+                      Record payment
+                    </button>
+                  )}
                   {owner && m.late && m.phone && (
                     <a
                       className="db-remind"

@@ -1,6 +1,7 @@
 use crate::{
     error::{AppError, AppResult},
     middleware::auth::AuthUser,
+    email,
     paystack,
     state::AppState,
 };
@@ -18,7 +19,7 @@ use sqlx::FromRow;
 use uuid::Uuid;
 
 pub const PAY_COLS: &str =
-    "py.id, py.plan_id, py.amount, py.platform_fee, py.reference, py.status, py.paid_at, py.created_at";
+    "py.id, py.plan_id, py.amount, py.platform_fee, py.reference, py.status, py.paid_at, py.created_at, py.method, py.note";
 
 #[derive(Serialize, FromRow)]
 pub struct PaymentRow {
@@ -30,6 +31,8 @@ pub struct PaymentRow {
     pub status: String,
     pub paid_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
+    pub method: String,
+    pub note: Option<String>,
 }
 
 pub fn routes() -> Router<AppState> {
@@ -43,6 +46,9 @@ pub fn routes() -> Router<AppState> {
 /// Customer taps "Pay now": we create a pending payment and get a Paystack checkout link.
 async fn pay(u: AuthUser, State(s): State<AppState>, Path(plan_id): Path<Uuid>) -> AppResult<Json<Value>> {
     u.require("customer")?;
+    if !s.config.online_payments {
+        return Err(AppError::BadRequest("Online payment is not open yet. Please pay your organizer directly and ask them to record it.".into()));
+    }
     let (locked, installment, paid, status, channel_id): (i64, i64, i64, String, Uuid) = sqlx::query_as(
         "SELECT locked_price, installment_amount, amount_paid, status, channel_id
          FROM plans WHERE id = $1 AND customer_id = $2",
@@ -162,6 +168,7 @@ async fn record_success(s: &AppState, reference: &str, amount: i64) -> AppResult
     .fetch_optional(&mut *tx)
     .await?;
 
+    let paid = row;
     match row {
         Some((plan_id, amt)) => {
             sqlx::query(
@@ -179,6 +186,11 @@ async fn record_success(s: &AppState, reference: &str, amount: i64) -> AppResult
         None => tracing::warn!("webhook: nothing to update for {reference} (already done or mismatch)"),
     }
     tx.commit().await?;
+    if let Some((plan_id, amt)) = paid {
+        if let Err(e) = send_receipt(s, plan_id, amt, reference).await {
+            tracing::warn!("receipt email failed: {e:?}");
+        }
+    }
     Ok(())
 }
 
@@ -203,13 +215,13 @@ async fn history(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<Vec<P
 /// The confirmation page calls this. It asks Paystack directly, so it works
 /// on your phone (where Paystack can't reach the webhook) and online too.
 async fn verify(u: AuthUser, State(s): State<AppState>, Path(reference): Path<String>) -> AppResult<Json<Value>> {
-    let owner: Uuid = sqlx::query_scalar(
+    let owner: Option<Uuid> = sqlx::query_scalar(
         "SELECT p.customer_id FROM payments py JOIN plans p ON p.id = py.plan_id WHERE py.reference = $1",
     )
     .bind(&reference)
     .fetch_one(&s.db)
     .await?;
-    if owner != u.id {
+    if owner != Some(u.id) {
         return Err(AppError::Forbidden);
     }
 
@@ -238,4 +250,34 @@ async fn verify(u: AuthUser, State(s): State<AppState>, Path(reference): Path<St
         "product_name": row.3,
         "paystack_status": data["status"]
     })))
+}
+
+/// Emails the customer a receipt after a confirmed online payment. People without an account are skipped.
+async fn send_receipt(s: &AppState, plan_id: Uuid, amount: i64, reference: &str) -> AppResult<()> {
+    let r: Option<(String, String, String, String, i64, i64)> = sqlx::query_as(
+        "SELECT u.email, u.full_name, COALESCE(pr.name, c.name), sl.business_name, p.amount_paid, p.locked_price
+         FROM plans p
+         JOIN users u ON u.id = p.customer_id
+         JOIN channels c ON c.id = p.channel_id
+         JOIN sellers sl ON sl.user_id = c.seller_id
+         LEFT JOIN products pr ON pr.id = p.product_id
+         WHERE p.id = $1",
+    )
+    .bind(plan_id)
+    .fetch_optional(&s.db)
+    .await?;
+    let Some((to, name, item, seller, paid, total)) = r else { return Ok(()) };
+    let first = email::esc(name.split_whitespace().next().unwrap_or("there"));
+    let body = format!(
+        "<p>Hi {first}, we received your payment. Thank you!</p><p><b>{}</b> for {}<br>Seller: {}<br>Paid so far: {} of {}<br>Reference: {}</p>",
+        email::naira(amount),
+        email::esc(&item),
+        email::esc(&seller),
+        email::naira(paid),
+        email::naira(total),
+        email::esc(reference)
+    );
+    let url = format!("{}/dashboard", s.config.frontend_url);
+    let html = email::card("Payment received", &body, Some(("View your orders", &url)));
+    email::send_html(s, &to, "Your Kobkart payment receipt", html).await
 }

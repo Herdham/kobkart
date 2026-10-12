@@ -25,7 +25,7 @@ export default function Customers() {
   // one row per customer, even if they joined several items
   const byPhone = {}
   for (const p of plans || []) {
-    const c = (byPhone[p.customer_phone] ||= { name: p.customer_name, phone: p.customer_phone, plans: 0, paid: 0, late: 0 })
+    const c = (byPhone[p.customer_phone || p.customer_name] ||= { name: p.customer_name, phone: p.customer_phone, plans: 0, paid: 0, late: 0 })
     c.plans += 1
     c.paid += p.amount_paid
     if (p.late) c.late += 1

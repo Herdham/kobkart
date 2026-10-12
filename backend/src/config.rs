@@ -10,6 +10,8 @@ pub struct Config {
     pub port: u16,
     pub resend_api_key: String,
     pub email_from: String,
+    pub cron_secret: String,
+    pub online_payments: bool,
 }
 
 impl Config {
@@ -30,6 +32,8 @@ impl Config {
             port: env::var("PORT").ok().and_then(|v| v.parse().ok()).unwrap_or(3000),
             resend_api_key: opt("RESEND_API_KEY", ""),
             email_from: opt("EMAIL_FROM", "Kobkart <onboarding@resend.dev>"),
+            cron_secret: opt("CRON_SECRET", ""),
+            online_payments: env::var("ONLINE_PAYMENTS").map(|v| v.trim() != "false").unwrap_or(true),
         }
     }
 }

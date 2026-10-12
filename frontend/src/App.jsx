@@ -23,6 +23,7 @@ import Settings from './pages/Settings'
 import { getSession } from './api/auth'
 import MyOrders from './pages/MyOrders'
 import AdminUsers from './pages/AdminUsers'
+import Claim from './pages/Claim'
 
 function RequireRole({ role, children }) {
   const s = getSession()
@@ -63,6 +64,7 @@ export default function App() {
           <Route path="/settings" element={<RequireRole><Settings /></RequireRole>} />
           <Route path="/my-orders" element={<RequireRole role="customer"><MyOrders /></RequireRole>} />
       <Route path="/admin/users" element={<RequireRole role="admin"><AdminUsers /></RequireRole>} />
+      <Route path="/claim/:token" element={<Claim />} />
     </Routes>
   )
 }
