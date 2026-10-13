@@ -4,7 +4,7 @@ import './dashboard.css'
 
 const SHOW_DRAFT_NOTICE = true // set to false after a lawyer has reviewed these pages
 const UPDATED = '9 October 2026'
-const CONTACT = '[support email to be added]'
+const CONTACT = '[kobkartsupport@gmail.com]'
 
 const DOCS = {
   terms: {
@@ -54,9 +54,7 @@ const DOCS = {
   privacy: {
     title: 'Privacy Policy',
     sections: [
-      { h: '1. Who we are', p: [
-        'Kobkart ("we") runs this platform. [Registered business name and address to be added after CAC registration.] Contact: ' + CONTACT + '.',
-      ] },
+      { h: '1. Who we are', p: ['Kobkart is operated by Musa Adam Babatunde in Kwara State, Nigeria.']},
       { h: '2. What we collect', p: [
         'Your name, email address, phone number and a password (stored only in scrambled form). If you are a seller: your business name, the bank name and account name you add for payouts, and the last four digits of that account number. We also keep records of the packages you join or create, your payments (amount, date, reference and status), and your referral code.',
         'Photos you upload for packages and products are stored so they can be shown to customers.',

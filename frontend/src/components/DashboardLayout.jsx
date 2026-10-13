@@ -16,8 +16,6 @@ const NAVS = {
     ['customers', 'Customers', Users, '/customers'],
     ['payments', 'Payments', CreditCard, '/payments'],
     ['orders', 'Orders', ShoppingBag, '/orders'],
-    ['messages', 'Messages', MessageSquare],
-    ['reports', 'Reports', TrendingUp],
     ['settings', 'Settings', Settings, '/settings'],
   ],
   customer: [
@@ -26,13 +24,11 @@ const NAVS = {
     ['join', 'Join with a code', Package, '/join'],
     ['contributions', 'My Contributions', CreditCard, '/contributions'],
     ['orders', 'My Orders', ShoppingBag, '/my-orders'],
-    ['messages', 'Messages', MessageSquare],
     ['settings', 'Settings', Settings, '/settings'],
   ],
   admin: [
     ['dashboard', 'Dashboard', LayoutDashboard, '/dashboard'],
     ['users', 'Users', Users, '/admin/users'],
-    ['reports', 'Reports', TrendingUp],
     ['settings', 'Settings', Settings, '/settings'],
   ],
 }
