@@ -79,7 +79,7 @@ export default function PackageDetail() {
       setForm({ name: '', price: '', description: '' })
       setImage(null)
       setShowAdd(false)
-      say('Product added')
+      say('Product added. Tap Edit on it to add colours, sizes and more photos.')
       load()
     } catch (err) {
       setFormError(err.message)
@@ -208,6 +208,7 @@ export default function PackageDetail() {
                 return (
                   <div className="prod-card" key={p.id}>
                     <div className="prod-img">{p.image_url ? <img src={p.image_url} alt="" /> : <Package size={30} />}</div>
+                    <button className="prod-edit" onClick={() => nav(`/products/${p.id}/edit`)}>Edit</button>
                     <button className="prod-x" onClick={() => removeProduct(p)} aria-label="Remove product"><Trash2 size={15} /></button>
                     <div className="prod-body">
                       <b>{p.name}</b>

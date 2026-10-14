@@ -67,7 +67,7 @@ async fn reminders(State(s): State<AppState>, Query(q): Query<KeyQ>) -> AppResul
 
     // 1. customers: due tomorrow, due today, and 1, 3 and 7 days late
     let due: Vec<Due> = sqlx::query_as(
-        "SELECT p.id, u.email, u.full_name, COALESCE(pr.name, c.name) AS item, c.name AS package,
+        "SELECT p.id, u.email, u.full_name, (COALESCE(pr.name, c.name) || COALESCE(' (' || NULLIF(concat_ws(', ', p.choice_color, p.choice_size), '') || ')', '')) AS item, c.name AS package,
                 sl.business_name AS seller,
                 LEAST(p.installment_amount, p.locked_price - p.amount_paid) AS due_amount,
                 p.next_due_date, (p.next_due_date - CURRENT_DATE)::int AS days

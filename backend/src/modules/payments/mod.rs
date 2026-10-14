@@ -232,7 +232,7 @@ async fn verify(u: AuthUser, State(s): State<AppState>, Path(reference): Path<St
     }
 
     let row: (String, i64, Uuid, String) = sqlx::query_as(
-        "SELECT py.status, py.amount, py.plan_id, COALESCE(pr.name, c.name)
+        "SELECT py.status, py.amount, py.plan_id, (COALESCE(pr.name, c.name) || COALESCE(' (' || NULLIF(concat_ws(', ', p.choice_color, p.choice_size), '') || ')', ''))
          FROM payments py
          JOIN plans p ON p.id = py.plan_id
          JOIN channels c ON c.id = p.channel_id
@@ -255,7 +255,7 @@ async fn verify(u: AuthUser, State(s): State<AppState>, Path(reference): Path<St
 /// Emails the customer a receipt after a confirmed online payment. People without an account are skipped.
 async fn send_receipt(s: &AppState, plan_id: Uuid, amount: i64, reference: &str) -> AppResult<()> {
     let r: Option<(String, String, String, String, i64, i64)> = sqlx::query_as(
-        "SELECT u.email, u.full_name, COALESCE(pr.name, c.name), sl.business_name, p.amount_paid, p.locked_price
+        "SELECT u.email, u.full_name, (COALESCE(pr.name, c.name) || COALESCE(' (' || NULLIF(concat_ws(', ', p.choice_color, p.choice_size), '') || ')', '')), sl.business_name, p.amount_paid, p.locked_price
          FROM plans p
          JOIN users u ON u.id = p.customer_id
          JOIN channels c ON c.id = p.channel_id

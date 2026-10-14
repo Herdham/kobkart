@@ -301,7 +301,7 @@ async fn browse(State(s): State<AppState>, Query(q): Query<BrowseQ>) -> AppResul
            )
            AND ($1::text IS NULL OR c.category = $1)
            AND ($2::text IS NULL OR c.name ILIKE $2 OR c.description ILIKE $2 OR s.business_name ILIKE $2
-                OR EXISTS (SELECT 1 FROM products x WHERE x.channel_id = c.id AND x.active AND x.name ILIKE $2))
+                OR EXISTS (SELECT 1 FROM products x WHERE x.channel_id = c.id AND x.active AND (x.name ILIKE $2 OR x.brand ILIKE $2)))
            AND ($3::bigint IS NULL OR c.contribution_amount <= $3)
          ORDER BY participants DESC, c.created_at DESC
          LIMIT $4",
