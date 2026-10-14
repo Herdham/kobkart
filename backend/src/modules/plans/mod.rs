@@ -97,6 +97,13 @@ async fn start_plan(u: AuthUser, State(s): State<AppState>, Json(b): Json<StartP
     if !active {
         return Err(AppError::BadRequest("This product is no longer available".into()));
     }
+    let closed: bool = sqlx::query_scalar("SELECT archived_at IS NOT NULL FROM channels WHERE id = $1")
+        .bind(channel_id)
+        .fetch_one(&s.db)
+        .await?;
+    if closed {
+        return Err(AppError::BadRequest("This package is closed and not taking new customers.".into()));
+    }
     let already: bool = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM plans WHERE customer_id = $1 AND product_id = $2 AND status IN ('active', 'completed'))",
     )

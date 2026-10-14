@@ -4,6 +4,7 @@ import { ArrowLeft, Copy, Link2, MessageCircle, Package, Plus, Trash2, UserPlus 
 import DashboardLayout from '../components/DashboardLayout'
 import ImagePicker from '../components/ImagePicker'
 import ListingToggle from '../components/ListingToggle'
+import LifecycleBar from '../components/LifecycleBar'
 import { api, toKobo } from '../api/http'
 import { getSession } from '../api/auth'
 import { naira, shortDate, whatsappLink } from '../api/seller'
@@ -159,6 +160,7 @@ export default function PackageDetail() {
               <a className="db-btn ghost" href={wa} target="_blank" rel="noreferrer"><MessageCircle size={16} /> Share on WhatsApp</a>
             </div>
             <ListingToggle channel={ch} onSaved={load} />
+                <LifecycleBar channel={ch} onChanged={load} />
           </div>
         </section>
 

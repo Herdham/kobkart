@@ -474,3 +474,17 @@
 .adm-search { width: 100%; height: 46px; border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; font: inherit; font-size: 14px; background: #fff; outline: none; }
 .adm-search:focus { border-color: var(--maroon); box-shadow: 0 0 0 3px rgba(107, 15, 30, 0.1); }
 @media (max-width: 560px) { .od-card { flex-direction: column; } .od-img { width: 100%; height: 120px; } }
+
+/* ---------- whatsapp import + lifecycle ---------- */
+.imp-text { width: 100%; min-height: 240px; border: 1px solid var(--line); border-radius: 12px; padding: 12px; font: inherit; font-size: 14px; line-height: 1.6; outline: none; }
+.imp-text:focus { border-color: var(--maroon); box-shadow: 0 0 0 3px rgba(107, 15, 30, 0.1); }
+.imp-row { display: grid; grid-template-columns: 30px 1fr 64px auto 34px; gap: 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid #f7eeee; }
+.imp-row:last-child { border-bottom: 0; }
+.imp-name { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.imp-name input, .imp-paid input { width: 100%; height: 40px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; background: #fff; outline: none; min-width: 0; }
+.imp-name input:last-child { height: 32px; font-size: 12.5px; }
+.imp-paid { display: flex; flex-direction: column; font-size: 11px; color: var(--muted); gap: 2px; }
+.imp-cl { display: flex; align-items: center; gap: 5px; font-size: 12px; white-space: nowrap; }
+.imp-cl input { accent-color: var(--maroon); width: 16px; height: 16px; }
+.lc { margin-top: 14px; padding-top: 14px; border-top: 1px solid #f1e6e6; max-width: 480px; display: flex; flex-direction: column; gap: 10px; }
+@media (max-width: 560px) { .imp-row { grid-template-columns: 28px 1fr 56px 34px; } .imp-cl { grid-column: 2 / 4; } }

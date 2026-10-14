@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowDown, ArrowLeft, ArrowUp, Copy, Link2, MessageCircle, UserPlus, Users, X } from 'lucide-react'
 import DashboardLayout from '../components/DashboardLayout'
 import ListingToggle from '../components/ListingToggle'
+import LifecycleBar from '../components/LifecycleBar'
 import { API, api } from '../api/http'
 import { getSession } from '../api/auth'
 import { naira, shortDate, whatsappLink } from '../api/seller'
@@ -161,6 +162,7 @@ export default function GroupDetail() {
                   <a className="db-btn ghost" href={wa} target="_blank" rel="noreferrer"><MessageCircle size={16} /> Share on WhatsApp</a>
                 </div>
                 <ListingToggle channel={ch} onSaved={load} />
+                <LifecycleBar channel={ch} onChanged={load} />
               </>
             )}
           </div>

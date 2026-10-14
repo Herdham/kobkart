@@ -18,7 +18,7 @@ use serde_json::{json, Value};
 use sqlx::FromRow;
 use uuid::Uuid;
 
-const COLS: &str = "id, seller_id, name, description, contribution_amount, frequency_days, invite_code, image_url, category, is_public, kind, slots, start_date, rotation_status, created_at";
+const COLS: &str = "id, seller_id, name, description, contribution_amount, frequency_days, invite_code, image_url, category, is_public, kind, slots, start_date, rotation_status, archived_at, created_at";
 const CATEGORIES: [&str; 8] = ["fashion", "shoes_bags", "kitchen", "electronics", "beauty", "food", "kids", "other"];
 
 #[derive(Serialize, FromRow)]
@@ -37,6 +37,7 @@ pub struct Channel {
     pub slots: Option<i32>,
     pub start_date: Option<NaiveDate>,
     pub rotation_status: String,
+    pub archived_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -292,7 +293,7 @@ async fn browse(State(s): State<AppState>, Query(q): Query<BrowseQ>) -> AppResul
                 (SELECT COUNT(*) FROM rotation_members rm WHERE rm.channel_id = c.id) AS filled
          FROM channels c
          JOIN sellers s ON s.user_id = c.seller_id
-         WHERE c.is_public AND s.verified AND NOT EXISTS (SELECT 1 FROM users su WHERE su.id = s.user_id AND su.suspended_at IS NOT NULL)
+         WHERE c.is_public AND c.archived_at IS NULL AND s.verified AND NOT EXISTS (SELECT 1 FROM users su WHERE su.id = s.user_id AND su.suspended_at IS NOT NULL)
            AND (
                 (c.kind = 'save' AND EXISTS (SELECT 1 FROM products x WHERE x.channel_id = c.id AND x.active))
              OR (c.kind = 'rotation' AND c.rotation_status = 'open'

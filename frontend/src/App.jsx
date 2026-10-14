@@ -7,6 +7,7 @@ import VerifyCode from './pages/VerifyCode'
 import ResetPassword from './pages/ResetPassword'
 import Dashboard from './pages/Dashboard'
 import Packages from './pages/Packages'
+import ImportList from './pages/ImportList'
 import PackageDetail from './pages/PackageDetail'
 import MyStore from './pages/MyStore'
 import Join from './pages/Join'
@@ -45,6 +46,7 @@ export default function App() {
       <Route path="/dashboard" element={<RequireRole><Dashboard /></RequireRole>} />
       <Route path="/store" element={<RequireRole role="seller"><MyStore /></RequireRole>} />
       <Route path="/packages" element={<RequireRole role="seller"><Packages /></RequireRole>} />
+      <Route path="/import" element={<RequireRole role="seller"><ImportList /></RequireRole>} />
       <Route path="/packages/:id" element={<RequireRole role="seller"><PackageDetail /></RequireRole>} />
       <Route path="/join" element={<Join />} />
       <Route path="/join/:code" element={<Join />} />

@@ -9,10 +9,10 @@ export function groupList(data, link) {
   const lines = members.map((m) => {
     const r = rounds.find((x) => x.round_no === m.position)
     const parts = [`${m.position}.`]
-    if (r?.collected) parts.push('CL')
+    if (r?.collected) parts.push('🆑')
     parts.push(m.name)
     if (r) parts.push(short(r.due_date))
-    if (running) parts.push(m.late || m.defaulted ? '❌' : '✅')
+    if (running) parts.push('✅'.repeat(Math.max(0, m.paid_count || 0)) + (m.late || m.defaulted ? '❌' : ''))
     return parts.join(' ')
   })
   return [
@@ -21,7 +21,7 @@ export function groupList(data, link) {
     '',
     ...lines,
     '',
-    running ? '✅ paid up   ❌ behind   CL collected' : 'Order of collection',
+    running ? '✅ one round paid   ❌ behind   🆑 collected' : 'Order of collection',
     link ? `Pay or check on Kobkart: ${link}` : '',
   ].join('\n').trim()
 }

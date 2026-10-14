@@ -30,8 +30,8 @@ fn guest(name: &str, phone: &str) -> AppResult<(String, String)> {
         return Err(AppError::BadRequest("Enter the person's name".into()));
     }
     let digits = phone.chars().filter(|c| c.is_ascii_digit()).count();
-    if !(10..=13).contains(&digits) {
-        return Err(AppError::BadRequest("Enter a valid phone number".into()));
+    if digits > 0 && !(10..=13).contains(&digits) {
+        return Err(AppError::BadRequest("Enter a valid phone number, or leave it empty".into()));
     }
     Ok((n, phone.trim().to_string()))
 }

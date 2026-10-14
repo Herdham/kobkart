@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Bell, ChevronDown, CreditCard, LayoutDashboard, LogOut, Menu, MessageSquare,
-  Package, Search, Settings, ShoppingBag, Store, TrendingUp, Users, X,
+  Package, Search, Settings, ShoppingBag, Store, Upload, TrendingUp, Users, X,
 } from 'lucide-react'
 import logo from '../assets/kobkart-logo.png'
 import { clearSession } from '../api/auth'
@@ -13,6 +13,7 @@ const NAVS = {
     ['dashboard', 'Dashboard', LayoutDashboard, '/dashboard'],
     ['store', 'My Store', Store, '/store'],
     ['packages', 'Packages', Package, '/packages'],
+    ['import', 'Import list', Upload, '/import'],
     ['customers', 'Customers', Users, '/customers'],
     ['payments', 'Payments', CreditCard, '/payments'],
     ['orders', 'Orders', ShoppingBag, '/orders'],

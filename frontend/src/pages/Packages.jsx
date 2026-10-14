@@ -19,6 +19,7 @@ export default function Packages() {
   const [form, setForm] = useState({ kind: 'save', name: '', description: '', amount: '', days: '5', slots: '20', category: 'fashion', pub: true })
   const [image, setImage] = useState(null)
   const [formError, setFormError] = useState('')
+  const [showArchived, setShowArchived] = useState(false)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -65,7 +66,7 @@ export default function Packages() {
   }
 
   const q = search.trim().toLowerCase()
-  const list = (data?.channels || []).filter((c) => c.name.toLowerCase().includes(q))
+  const list = (data?.channels || []).filter((c) => c.name.toLowerCase().includes(q) && (showArchived || !c.archived_at))
 
   return (
     <DashboardLayout name={bizName} role="seller" active="packages" search={search} onSearch={setSearch}>
@@ -81,6 +82,9 @@ export default function Packages() {
         </div>
 
         {error && <div className="alert">{error}</div>}
+        {data?.channels.some((c) => c.archived_at) && (
+          <label className="check"><input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} /> Show archived packages</label>
+        )}
         {data && !verified && (
           <div className="warn-card">
             Your seller account is waiting for approval from Kobkart. You can create packages as soon as you are verified.
@@ -173,7 +177,7 @@ export default function Packages() {
               <button className="pk-card" key={c.id} onClick={() => nav(isGroup ? `/groups/${c.id}` : `/packages/${c.id}`)}>
                 <div className="pk-img">
                   {c.image_url ? <img src={c.image_url} alt="" /> : <Package size={34} />}
-                  <span className={`pk-pub ${c.is_public ? '' : 'off'}`}>{c.is_public ? 'Public' : 'Private'}</span>
+                  <span className={`pk-pub ${c.is_public && !c.archived_at ? '' : 'off'}`}>{c.archived_at ? 'Archived' : c.rotation_status === 'finished' ? 'Finished' : c.is_public ? 'Public' : 'Private'}</span>
                   {isGroup && <span className="bp-kind">Group</span>}
                 </div>
                 <div className="pk-body">
