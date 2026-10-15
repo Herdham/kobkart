@@ -4,11 +4,14 @@ import { ArrowDown, ArrowLeft, ArrowUp, Copy, Link2, MessageCircle, UserPlus, Us
 import DashboardLayout from '../components/DashboardLayout'
 import ListingToggle from '../components/ListingToggle'
 import LifecycleBar from '../components/LifecycleBar'
+import ShareCardButtons from '../components/ShareCardButtons'
 import { API, api } from '../api/http'
 import { getSession } from '../api/auth'
 import { naira, shortDate, whatsappLink } from '../api/seller'
 import { startPayment } from '../api/customer'
 import { groupList } from '../api/whatsappList'
+import GroupCatalogue from '../components/GroupCatalogue'
+import JoinRequests from '../components/JoinRequests'
 import './dashboard.css'
 
 export default function GroupDetail() {
@@ -162,11 +165,28 @@ export default function GroupDetail() {
                   <a className="db-btn ghost" href={wa} target="_blank" rel="noreferrer"><MessageCircle size={16} /> Share on WhatsApp</a>
                 </div>
                 <ListingToggle channel={ch} onSaved={load} />
+                <ShareCardButtons
+                  fileName={ch.invite_code}
+                  caption={`${ch.name} by ${data.seller}\nPay ${naira(ch.contribution_amount)} every ${ch.frequency_days} days.${open ? ` ${Math.max(0, ch.slots - members.length)} place(s) left.` : ''}\nJoin on Kobkart: ${link}`}
+                  card={{
+                    seller: data.seller,
+                    title: ch.name,
+                    headline: `Pay ${naira(ch.contribution_amount)} every ${ch.frequency_days} day${ch.frequency_days > 1 ? 's' : ''}`,
+                    detail: `Group of ${ch.slots} • Pot ${naira(ch.pot)} each round${open ? ` • ${Math.max(0, ch.slots - members.length)} places left` : ''}`,
+                    description: ch.description || '',
+                    imageUrl: ch.has_image ? `${API}/channels/${ch.id}/image` : null,
+                    link,
+                  }}
+                />
                 <LifecycleBar channel={ch} onChanged={load} />
               </>
             )}
           </div>
         </section>
+
+        <GroupCatalogue channelId={ch.id} pot={ch.pot} owner={owner} me={me} members={members} onChanged={load} />
+
+        {owner && <JoinRequests channel={ch} onChanged={load} />}
 
         {me && !owner && (
           open ? (

@@ -4,6 +4,7 @@ import { Landmark, MessageCircle, ShieldCheck, Store, Users, Wallet } from 'luci
 import DashboardLayout from '../components/DashboardLayout'
 import { api } from '../api/http'
 import { naira, shortDate, whatsappLink } from '../api/seller'
+import PlanControl from '../components/PlanControl'
 import './dashboard.css'
 import { socialUrl } from '../api/links'
 
@@ -87,8 +88,8 @@ export default function AdminDashboard() {
               </div>
               <div className="db-card db-stat">
                 <span className="db-stat-icon"><Landmark size={22} /></span>
-                <p>Your income</p><b className="red">{naira(o.platform_income)}</b>
-                <small>Platform fees</small>
+                <p>Your income</p><b className="red">{naira((o.platform_income || 0) + (o.plan_income || 0))}</b>
+                <small>Plans + fees</small>
               </div>
             </div>
 
@@ -123,6 +124,7 @@ export default function AdminDashboard() {
                         )}
                         {!s.instagram && !s.facebook && !s.x_handle && !s.website && <span className="bd late">No social link</span>}
                       </div>
+                      <PlanControl s={s} onDone={load} />
                       <div className="ad-badges">
                         <span className={`bd ${s.verified ? 'ontrack' : 'completed'}`}>{s.verified ? 'Approved' : 'Pending'}</span>
                         <span className={`bd ${s.payout_ready ? 'ontrack' : 'late'}`}>{s.payout_ready ? 'Payout ready' : 'No payout account'}</span>

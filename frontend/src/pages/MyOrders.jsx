@@ -154,6 +154,7 @@ export default function MyOrders() {
                               : `You collect goods worth ${naira(g.contribution_amount * g.member_count)} in round ${g.position}${g.turn_date ? ` on ${shortDate(g.turn_date)}` : ''}.`}
                           </p>
                           {!open && <p className="small" style={{ margin: '4px 0 0' }}>{g.paid_count}/{g.member_count} of your contributions paid.</p>}
+                          <p className="small" style={{ margin: '4px 0 0' }}>Your pick: <b>{g.choice || 'not chosen yet'}</b></p>
                           <div className="cp-actions" style={{ marginTop: 10 }}>
                             <button className="db-btn sm" onClick={() => nav(`/groups/${g.channel_id}`)}>View group</button>
                             {wa && <a className="db-remind" href={wa} target="_blank" rel="noreferrer"><MessageCircle size={15} /> Contact seller</a>}

@@ -9,8 +9,8 @@ use axum::{
     routing::{get, put},
     Json, Router,
 };
-use chrono::{DateTime, Duration, NaiveDate, Utc};
-use serde::{Deserialize, Serialize};
+use chrono::{DateTime, NaiveDate, Utc};
+use serde::Serialize;
 use serde_json::{json, Value};
 use sqlx::FromRow;
 use uuid::Uuid;
@@ -38,7 +38,9 @@ pub struct PlanView {
 }
 
 const PLAN_SELECT: &str = "SELECT p.id, p.channel_id, c.name AS channel_name, sl.business_name AS seller_name,
-    p.product_id, ((COALESCE(pr.name, c.name) || COALESCE(' (' || NULLIF(concat_ws(', ', p.choice_color, p.choice_size), '') || ')', '')) || COALESCE(' (' || NULLIF(concat_ws(', ', p.choice_color, p.choice_size), '') || ')', '')) AS product_name, COALESCE(pr.image_url, c.image_url) AS image_url,
+    p.product_id,
+    (COALESCE(pr.name, c.name) || COALESCE(' (' || NULLIF(concat_ws(', ', p.choice_color, p.choice_size), '') || ')', '')) AS product_name,
+    COALESCE(pr.image_url, c.image_url) AS image_url,
     p.locked_price, p.installment_amount, c.frequency_days, p.amount_paid,
     (p.locked_price - p.amount_paid) AS remaining,
     (SELECT COUNT(*) FROM payments py WHERE py.plan_id = p.id AND py.status = 'success') AS payments_made,
@@ -76,61 +78,7 @@ pub fn routes() -> Router<AppState> {
         .route("/seller/plans", get(seller_plans))
 }
 
-#[derive(Deserialize)]
-struct StartPlan {
-    product_id: Uuid,
-}
 
-/// Customer picks a product: price is locked and the schedule starts.
-async fn start_plan(u: AuthUser, State(s): State<AppState>, Json(b): Json<StartPlan>) -> AppResult<Json<Value>> {
-    u.require("customer")?;
-    if crate::modules::rotation::has_defaulted(&s, u.id).await? {
-        return Err(AppError::BadRequest("You have overdue payments in a group. Please catch up before joining a new package.".into()));
-    }
-    let (channel_id, price, contribution, freq, active): (Uuid, i64, i64, i32, bool) = sqlx::query_as(
-        "SELECT p.channel_id, p.price, c.contribution_amount, c.frequency_days, p.active
-         FROM products p JOIN channels c ON c.id = p.channel_id WHERE p.id = $1",
-    )
-    .bind(b.product_id)
-    .fetch_one(&s.db)
-    .await?;
-    if !active {
-        return Err(AppError::BadRequest("This product is no longer available".into()));
-    }
-    let closed: bool = sqlx::query_scalar("SELECT archived_at IS NOT NULL FROM channels WHERE id = $1")
-        .bind(channel_id)
-        .fetch_one(&s.db)
-        .await?;
-    if closed {
-        return Err(AppError::BadRequest("This package is closed and not taking new customers.".into()));
-    }
-    let already: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM plans WHERE customer_id = $1 AND product_id = $2 AND status IN ('active', 'completed'))",
-    )
-    .bind(u.id)
-    .bind(b.product_id)
-    .fetch_one(&s.db)
-    .await?;
-    if already {
-        return Err(AppError::BadRequest("You already joined this product. Check your dashboard.".into()));
-    }
-    let installment = contribution.min(price);
-    let next_due = Utc::now().date_naive() + Duration::days(freq as i64);
-
-    let id: Uuid = sqlx::query_scalar(
-        "INSERT INTO plans (customer_id, channel_id, product_id, locked_price, installment_amount, next_due_date)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
-    )
-    .bind(u.id)
-    .bind(channel_id)
-    .bind(b.product_id)
-    .bind(price)
-    .bind(installment)
-    .bind(next_due)
-    .fetch_one(&s.db)
-    .await?;
-    Ok(Json(json!({ "plan_id": id })))
-}
 
 async fn my_plans(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<Vec<PlanView>>> {
     u.require("customer")?;

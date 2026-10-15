@@ -97,11 +97,11 @@ export default function Packages() {
             {formError && <div className="alert">{formError}</div>}
             <form className="fm" onSubmit={create}>
               <div className="kind-pick">
-                <button type="button" className={!group ? 'on' : ''} onClick={() => setForm((f) => ({ ...f, kind: 'save' }))}>
+                <button type="button" className={!group ? 'on' : ''} onClick={() => setForm((f) => ({ ...f, kind: 'save', pub: true }))}>
                   <b>Save &amp; Collect</b>
                   <small>Each customer picks an item and pays until it is fully paid, then receives it.</small>
                 </button>
-                <button type="button" className={group ? 'on' : ''} onClick={() => setForm((f) => ({ ...f, kind: 'rotation' }))}>
+                <button type="button" className={group ? 'on' : ''} onClick={() => setForm((f) => ({ ...f, kind: 'rotation', pub: false }))}>
                   <b>Group Rotation</b>
                   <small>A fixed group pays every round. Each round one member collects the full pot as goods, in the order you set.</small>
                 </button>

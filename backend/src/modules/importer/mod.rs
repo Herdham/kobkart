@@ -77,6 +77,8 @@ async fn import_group(u: AuthUser, State(s): State<AppState>, Json(b): Json<Impo
         }
     }
 
+    let adding = b.members.iter().filter(|m| (m.paid as usize) < n).count() as i64;
+    crate::modules::billing::ensure_capacity(&s, u.id, adding).await?;
     let freq = b.frequency_days as i64;
     let contribution = b.contribution_amount;
     let nn = n as i64;

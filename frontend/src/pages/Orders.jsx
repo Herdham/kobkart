@@ -123,7 +123,7 @@ export default function Orders() {
                   <div className="db-table-wrap">
                     <table>
                       <thead>
-                        <tr><th>Group</th><th>Round</th><th>Collects</th><th>Phone</th><th>Pot</th><th>Paid in</th><th>Due</th><th>Action</th></tr>
+                        <tr><th>Group</th><th>Round</th><th>Collects</th><th>Phone</th><th>Wants</th><th>Pot</th><th>Paid in</th><th>Due</th><th>Action</th></tr>
                       </thead>
                       <tbody>
                         {groupRows.map((c) => {
@@ -135,6 +135,7 @@ export default function Orders() {
                               <td>{c.round_no} of {c.member_count}</td>
                               <td>{c.collector_name}</td>
                               <td>{c.collector_phone}</td>
+                              <td>{c.choice || <span className="muted">Not chosen</span>}</td>
                               <td>{naira(c.pot)}</td>
                               <td>{c.paid_count}/{c.member_count}</td>
                               <td><span className={`bd ${state[1]}`}>{state[0]}</span> {shortDate(c.due_date)}</td>

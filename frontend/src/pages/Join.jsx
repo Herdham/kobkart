@@ -20,6 +20,7 @@ export default function Join() {
   const [commit, setCommit] = useState(false)
   const [joining, setJoining] = useState(false)
   const [msg, setMsg] = useState('')
+  const [req, setReq] = useState(null)
 
   useEffect(() => {
     if (!code) return
@@ -33,6 +34,11 @@ export default function Join() {
       })
       .catch((e) => setError(e.status === 404 ? 'We could not find a package with that code. Please check it and try again.' : e.message))
   }, [code]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!data?.rotation || role !== 'customer') return
+    api(`/rotation/${data.channel.id}/my-request`).then(setReq).catch(() => {})
+  }, [data, role])
 
   // After login or sign up, the dashboard sends them back here.
   const remember = (withGroup) => {
@@ -57,8 +63,13 @@ export default function Join() {
     setJoining(true)
     setMsg('')
     try {
-      await api(`/rotation/${ch.id}/join`, { method: 'POST', body: { commitment: true } })
-      nav(`/groups/${ch.id}`, { replace: true })
+      const r = await api(`/rotation/${ch.id}/join`, { method: 'POST', body: { commitment: true } })
+      if (r.status === 'requested') {
+        setSheet(false)
+        setReq({ member: false, status: 'pending' })
+      } else {
+        nav(`/groups/${ch.id}`, { replace: true })
+      }
     } catch (e) {
       setMsg(e.message)
     } finally {
@@ -141,6 +152,24 @@ export default function Join() {
               {steps.map(([t, d]) => <div key={t}><b>{t}</b>{d}</div>)}
             </div>
 
+            {rot && data.products.length > 0 && (
+              <section className="db-card">
+                <div className="db-card-head"><h2>What the pot can buy</h2></div>
+                <p className="muted small" style={{ margin: '0 0 10px' }}>When it is your turn you choose one of these. Tap an item to see photos, colours and sizes.</p>
+                <div className="prod-grid">
+                  {data.products.map((p) => (
+                    <Link className="prod-card prod-link" key={p.id} to={`/product/${p.id}`}>
+                      <div className="prod-img">{p.image_url ? <img src={p.image_url} alt="" /> : <Package size={30} />}</div>
+                      <div className="prod-body">
+                        <b>{p.name}</b>
+                        <div className="price">{naira(p.price)}</div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {msg && !sheet && <div className="alert">{msg}</div>}
 
             {rot ? (
@@ -151,7 +180,19 @@ export default function Join() {
                     ? 'It is full or has already started. Ask your seller about the next group.'
                     : 'You will pay every round, and collect the full pot as goods when your turn comes.'}
                 </p>
-                {!full && <button className="db-btn" style={{ marginTop: 10 }} onClick={openGroup}>Join this group</button>}
+                {!full && rot.join_mode === 'approval' && (
+                  <div className="alert info" style={{ width: '100%', textAlign: 'left' }}>
+                    This organizer approves every new member. If your organizer sent you this link, send your request now and tell them you did. If you found this group on your own, you can still ask, and they will decide. You will get an email either way.
+                  </div>
+                )}
+                {!full && req?.member && <button className="db-btn" style={{ marginTop: 10 }} onClick={() => nav(`/groups/${ch.id}`)}>Open your group</button>}
+                {!full && !req?.member && req?.status === 'pending' && <div className="alert info" style={{ width: '100%' }}>Request sent. Waiting for the organizer to approve you.</div>}
+                {!full && !req?.member && req?.status !== 'pending' && (
+                  <button className="db-btn" style={{ marginTop: 10 }} onClick={openGroup}>
+                    {rot.join_mode === 'approval' ? 'Send join request' : 'Join this group'}
+                  </button>
+                )}
+                {!full && !req?.member && req?.status === 'declined' && <small className="muted">Your last request was not approved. You can contact the organizer or ask again.</small>}
               </section>
             ) : (
               <section className="db-card">
@@ -206,7 +247,7 @@ export default function Join() {
                 </label>
                 {msg && <div className="alert">{msg}</div>}
                 <div className="fm-actions">
-                  <button className="db-btn" onClick={confirmGroup} disabled={joining}>{joining ? 'Joining...' : 'Confirm & join'}</button>
+                  <button className="db-btn" onClick={confirmGroup} disabled={joining}>{joining ? 'Sending...' : rot.join_mode === 'approval' ? 'Send request' : 'Confirm & join'}</button>
                   <button className="db-btn ghost" onClick={() => setSheet(false)}>Cancel</button>
                 </div>
               </>

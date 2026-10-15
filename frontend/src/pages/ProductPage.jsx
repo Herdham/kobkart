@@ -17,6 +17,8 @@ export default function ProductPage() {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [mine, setMine] = useState([])
+  const [grp, setGrp] = useState(null)
+  const [member, setMember] = useState(null)
   const [color, setColor] = useState(params.get('color') || '')
   const [size, setSize] = useState(params.get('size') || '')
   const [idx, setIdx] = useState(0)
@@ -35,9 +37,20 @@ export default function ProductPage() {
     }
   }, [id, role])
 
-  // coming back after sign up: reopen the confirmation with the same choices
+  // extra information for items that belong to a group
   useEffect(() => {
-    if (!data || params.get('join') !== '1' || role !== 'customer') return
+    if (!data || data.package.kind !== 'rotation') return
+    api(`/channels/code/${data.package.invite_code}`).then((d) => setGrp(d.rotation)).catch(() => {})
+    if (role === 'customer') {
+      api(`/rotation/${data.package.id}`)
+        .then((d) => setMember(d.members.find((m) => m.is_me) || null))
+        .catch(() => setMember(null))
+    }
+  }, [data, role])
+
+  // coming back after sign up (Save & Collect): reopen the confirmation with the same choices
+  useEffect(() => {
+    if (!data || data.package.kind === 'rotation' || params.get('join') !== '1' || role !== 'customer') return
     const needColor = data.colors.length > 0 && !color
     const needSize = data.sizes.length > 0 && !size
     if (!needColor && !needSize) setSheet(true)
@@ -61,9 +74,12 @@ export default function ProductPage() {
   if (!data) return <div className="jn">{header}<main className="jn-wrap"><div className="db-loading">Loading item...</div></main></div>
 
   const { product: p, package: ch, colors, sizes, images } = data
+  const isGroup = ch.kind === 'rotation'
   const each = Math.min(ch.contribution_amount, p.price)
+  const pot = grp?.pot || 0
   const isOwner = session?.user?.id === ch.seller_id
   const need = colors.length && !color ? 'Choose a colour' : sizes.length && !size ? 'Choose a size' : ''
+  const current = member?.choice?.product_id === id ? member.choice : null
 
   const onScroll = () => {
     const el = trackRef.current
@@ -99,9 +115,27 @@ export default function ProductPage() {
     }
   }
 
+  async function choose() {
+    if (need) return setMsg(need)
+    setJoining(true)
+    setMsg('')
+    try {
+      await api(`/rotation/${ch.id}/choice`, { method: 'PUT', body: { product_id: id, color: color || null, size: size || null } })
+      nav(`/groups/${ch.id}`, { replace: true })
+    } catch (e) {
+      setMsg(e.message)
+    } finally {
+      setJoining(false)
+    }
+  }
+
   let action
   if (isOwner) action = <Link className="db-btn ghost" to={`/products/${id}/edit`}><Pencil size={15} /> Edit item</Link>
-  else if (ch.closed) action = <span className="muted small">Not taking new people</span>
+  else if (isGroup) {
+    if (role === 'customer' && member) action = <button className="db-btn" disabled={joining} onClick={choose}>{joining ? 'Saving...' : current ? 'Update my pick' : 'Choose for my turn'}</button>
+    else if (session && role !== 'customer') action = <span className="muted small">Log in as a customer to join</span>
+    else action = <Link className="db-btn" to={`/join/${ch.invite_code}`}>Join the group first <ArrowRight size={16} /></Link>
+  } else if (ch.closed) action = <span className="muted small">Not taking new people</span>
   else if (session && role !== 'customer') action = <span className="muted small">Log in as a customer to join</span>
   else action = <button className="db-btn" onClick={start}>Join with this <ArrowRight size={16} /></button>
 
@@ -129,9 +163,16 @@ export default function ProductPage() {
           {p.brand && <p className="pp-brand">{p.brand}</p>}
           <h1>{p.name}</h1>
           <div className="pp-price">{naira(p.price)}</div>
-          <p className="muted small" style={{ margin: 0 }}>
-            Pay {naira(each)} every {ch.frequency_days} day{ch.frequency_days > 1 ? 's' : ''} • {data.payments} payment{data.payments === 1 ? '' : 's'} • about {data.days} days
-          </p>
+          {isGroup ? (
+            <p className="muted small" style={{ margin: 0 }}>
+              {grp ? `The group pot is ${naira(pot)} each round. ` : ''}
+              {grp && (p.price <= pot ? 'This item is covered by the pot.' : `The pot covers ${naira(pot)}, so you would add ${naira(p.price - pot)} yourself.`)}
+            </p>
+          ) : (
+            <p className="muted small" style={{ margin: 0 }}>
+              Pay {naira(each)} every {ch.frequency_days} day{ch.frequency_days > 1 ? 's' : ''} • {data.payments} payment{data.payments === 1 ? '' : 's'} • about {data.days} days
+            </p>
+          )}
 
           {colors.length > 0 && (
             <div className="opt">
@@ -163,24 +204,35 @@ export default function ProductPage() {
           <div className="pp-seller">
             <span>Sold by <b>{ch.seller}</b></span>
             {ch.seller_verified && <span className="bd ontrack"><ShieldCheck size={13} style={{ marginRight: 4 }} />Verified seller</span>}
-            <Link to={`/join/${ch.invite_code}`} className="link-strong">More from this package <ArrowRight size={14} /></Link>
+            <Link to={`/join/${ch.invite_code}`} className="link-strong">{isGroup ? 'About this group' : 'More from this package'} <ArrowRight size={14} /></Link>
           </div>
 
-          {mine.length > 0 && (
+          {!isGroup && mine.length > 0 && (
             <div className="alert info" style={{ marginTop: 14 }}>
               You already have this item in <Link to="/my-orders" className="link-strong">My Orders</Link>. Joining again adds another order, for example in a different colour or size.
             </div>
+          )}
+          {isGroup && current && (
+            <div className="alert info" style={{ marginTop: 14 }}>
+              This is your current pick{current.color || current.size ? ` (${[current.color, current.size].filter(Boolean).join(', ')})` : ''}. You can change it until you collect.
+            </div>
+          )}
+          {isGroup && role === 'customer' && !member && !isOwner && (
+            <div className="alert info" style={{ marginTop: 14 }}>You can choose this item for your turn once you have joined the group.</div>
           )}
           {msg && !sheet && <div className="alert" style={{ marginTop: 14 }}>{msg}</div>}
         </div>
       </main>
 
       <div className="pp-bar">
-        <div><b>{naira(p.price)}</b><small>{data.payments} payments of {naira(each)}</small></div>
+        <div>
+          <b>{naira(p.price)}</b>
+          <small>{isGroup ? (grp ? `Group pot ${naira(pot)}` : 'Group item') : `${data.payments} payments of ${naira(each)}`}</small>
+        </div>
         {action}
       </div>
 
-      {sheet && (
+      {sheet && !isGroup && (
         <>
           <div className="jn-sheet-bg" onClick={() => setSheet(false)} />
           <div className="jn-sheet">

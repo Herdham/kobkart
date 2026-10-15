@@ -25,7 +25,7 @@ const DOCS = {
         'When you join a group you promise to keep paying every round until the group ends, including after you have collected. Kobkart gives the seller tools to track payments but does not guarantee that every member will pay. Joining a group is a risk that you and the seller accept together.',
       ] },
       { h: '5. Payments and fees', p: [
-        'All amounts are in naira. Customers pay the amount shown and no extra Kobkart fee is added to it. Our service fee is taken from the seller\'s side of each payment. Card details are handled by Paystack, not by Kobkart.',
+        'All amounts are in naira. Customers pay the amount shown and no extra Kobkart fee is added to it. Kobkart earns from monthly seller plans, not from your payment. Card details are handled by Paystack, not by Kobkart.',
       ] },
       { h: '6. Late or missed payments', p: [
         "If you miss a payment, you are shown as Late. After a short grace period you may be shown as Defaulted. A Defaulted person may be blocked from joining new packages until they catch up, and the seller can contact you about it.",
@@ -100,7 +100,7 @@ const DOCS = {
       ] },
       { h: '5. Payouts and fees', p: [
         'Customer payments go through Paystack to the bank account you saved. Check that the account name shown is yours before you save it. Kobkart is not responsible for payouts to an account you entered incorrectly.',
-        "Kobkart's service fee is a percentage of each payment (currently 3%) and Paystack's processing charges are also taken from your side. You can see each payment in your Payments page.",
+        "Kobkart charges a flat monthly plan fee based on how many active members you manage, and the Free plan has no fee. Paystack's processing charge on online customer payments is taken from your share. Payments you record yourself carry no processing charge. You can see each payment in your Payments page.",
       ] },
       { h: '6. Refunds and disputes', p: [
         'If you cannot deliver, you must refund the customer promptly for anything not delivered. If you ignore a customer, we may suspend your account, share payment records with the customer, and share them with the authorities when the law requires it.',

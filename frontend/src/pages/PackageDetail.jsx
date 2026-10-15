@@ -5,7 +5,8 @@ import DashboardLayout from '../components/DashboardLayout'
 import ImagePicker from '../components/ImagePicker'
 import ListingToggle from '../components/ListingToggle'
 import LifecycleBar from '../components/LifecycleBar'
-import { api, toKobo } from '../api/http'
+import ShareCardButtons from '../components/ShareCardButtons'
+import { API, api, toKobo } from '../api/http'
 import { getSession } from '../api/auth'
 import { naira, shortDate, whatsappLink } from '../api/seller'
 import { packageList } from '../api/whatsappList'
@@ -160,6 +161,19 @@ export default function PackageDetail() {
               <a className="db-btn ghost" href={wa} target="_blank" rel="noreferrer"><MessageCircle size={16} /> Share on WhatsApp</a>
             </div>
             <ListingToggle channel={ch} onSaved={load} />
+                <ShareCardButtons
+                  fileName={ch.invite_code}
+                  caption={`${ch.name} by ${bizName}\nPay ${naira(ch.contribution_amount)} every ${ch.frequency_days} days.\nJoin on Kobkart: ${link}`}
+                  card={{
+                    seller: bizName,
+                    title: ch.name,
+                    headline: `Pay ${naira(ch.contribution_amount)} every ${ch.frequency_days} day${ch.frequency_days > 1 ? 's' : ''}`,
+                    detail: data.products.length ? `${data.products.length} item${data.products.length === 1 ? '' : 's'} to choose from` : '',
+                    description: ch.description || '',
+                    imageUrl: ch.image_url ? `${API}/channels/${ch.id}/image` : null,
+                    link,
+                  }}
+                />
                 <LifecycleBar channel={ch} onChanged={load} />
           </div>
         </section>

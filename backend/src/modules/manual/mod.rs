@@ -66,6 +66,7 @@ async fn add_guest_plan(u: AuthUser, State(s): State<AppState>, Json(b): Json<Gu
     if !active {
         return Err(AppError::BadRequest("This product is no longer available".into()));
     }
+    crate::modules::billing::ensure_capacity(&s, u.id, 1).await?;
     let id: Uuid = sqlx::query_scalar(
         "INSERT INTO plans (channel_id, product_id, locked_price, installment_amount, next_due_date, guest_name, guest_phone)
          VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
@@ -109,6 +110,7 @@ async fn add_guest_member(
     if status != "open" {
         return Err(AppError::BadRequest("Members can only be added before the group starts.".into()));
     }
+    crate::modules::billing::ensure_capacity(&s, u.id, 1).await?;
     let slots = slots.unwrap_or(0);
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM rotation_members WHERE channel_id = $1")
         .bind(id)

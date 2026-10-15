@@ -40,6 +40,7 @@ struct GroupOrder {
     collected: bool,
     member_count: i64,
     paid_count: i64,
+    choice: Option<String>,
 }
 
 /// Everything a customer is waiting for: items they are paying for and group turns.
@@ -71,7 +72,8 @@ async fn orders(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<Value>
                 c.contribution_amount, c.rotation_status AS group_status, m.position,
                 r.due_date AS turn_date, COALESCE(r.collected, FALSE) AS collected,
                 (SELECT COUNT(*) FROM rotation_members x WHERE x.channel_id = c.id) AS member_count,
-                (SELECT COUNT(*) FROM payments py WHERE py.plan_id = m.plan_id AND py.status = 'success') AS paid_count
+                (SELECT COUNT(*) FROM payments py WHERE py.plan_id = m.plan_id AND py.status = 'success') AS paid_count,
+                (SELECT x.name || COALESCE(' (' || NULLIF(concat_ws(', ', m.choice_color, m.choice_size), '') || ')', '') FROM products x WHERE x.id = m.choice_product_id) AS choice
          FROM rotation_members m
          JOIN channels c ON c.id = m.channel_id
          JOIN sellers sl ON sl.user_id = c.seller_id

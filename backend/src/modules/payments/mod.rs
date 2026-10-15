@@ -146,7 +146,12 @@ async fn webhook(State(s): State<AppState>, headers: HeaderMap, body: Bytes) -> 
     if event["event"] == "charge.success" {
         let reference = event["data"]["reference"].as_str().unwrap_or("");
         let amount = event["data"]["amount"].as_i64().unwrap_or(0);
-        if let Err(e) = record_success(&s, reference, amount).await {
+        let res = if reference.starts_with("SUB-") {
+            crate::modules::billing::record_sub_success(&s, reference, amount).await
+        } else {
+            record_success(&s, reference, amount).await
+        };
+        if let Err(e) = res {
             tracing::error!("webhook failed for {reference}: {e:?}");
             return StatusCode::INTERNAL_SERVER_ERROR; // Paystack will retry
         }

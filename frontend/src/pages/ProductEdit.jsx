@@ -80,6 +80,7 @@ export default function ProductEdit() {
   }, [id, nav])
 
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }))
+  const back = () => (data?.package.kind === 'rotation' ? `/groups/${data.package.id}` : `/packages/${data.package.id}`)
 
   async function addPhotos(e) {
     const files = Array.from(e.target.files || [])
@@ -112,7 +113,7 @@ export default function ProductEdit() {
           images: images.map((im) => (im.id ? { id: im.id, color: im.color || null } : { data: im.data, color: im.color || null })),
         },
       })
-      nav(`/packages/${data.package.id}`)
+      nav(back())
     } catch (e) {
       say(e.message)
       setSaving(false)
@@ -126,7 +127,7 @@ export default function ProductEdit() {
   else {
     body = (
       <div className="db-stack">
-        <button className="db-link" onClick={() => nav(`/packages/${data.package.id}`)}><ArrowLeft size={14} /> Back to package</button>
+        <button className="db-link" onClick={() => nav(back())}><ArrowLeft size={14} /> Back to package</button>
         <div className="db-page-head">
           <div>
             <h1>Edit item</h1>
@@ -185,7 +186,7 @@ export default function ProductEdit() {
 
         <div className="fm-actions">
           <button className="db-btn" disabled={saving} onClick={save}>{saving ? 'Saving...' : 'Save changes'}</button>
-          <button className="db-btn ghost" onClick={() => nav(`/packages/${data.package.id}`)}>Cancel</button>
+          <button className="db-btn ghost" onClick={() => nav(back())}>Cancel</button>
         </div>
       </div>
     )

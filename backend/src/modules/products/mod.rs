@@ -350,7 +350,7 @@ struct JoinReq {
     size: Option<String>,
 }
 
-fn pick(opts: &[(String, String, bool)], kind: &str, chosen: Option<&str>) -> AppResult<Option<String>> {
+pub fn pick(opts: &[(String, String, bool)], kind: &str, chosen: Option<&str>) -> AppResult<Option<String>> {
     let mine: Vec<&(String, String, bool)> = opts.iter().filter(|o| o.0 == kind).collect();
     if mine.is_empty() {
         return Ok(None);
@@ -385,6 +385,7 @@ async fn join_item(u: AuthUser, State(s): State<AppState>, Json(b): Json<JoinReq
     if closed {
         return bad("This package is closed and not taking new customers.");
     }
+    crate::modules::billing::ensure_capacity_channel(&s, channel_id, 1).await?;
     let opts: Vec<(String, String, bool)> =
         sqlx::query_as("SELECT kind, label, sold_out FROM product_options WHERE product_id = $1")
             .bind(b.product_id)

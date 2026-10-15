@@ -23,6 +23,7 @@ pub fn routes() -> Router<AppState> {
         .route("/rotation/{channel_id}/rounds/{round_no}/collected", put(set_collected))
         .route("/rotation/{channel_id}/members/{member_id}", delete(remove_member))
         .route("/seller/collections", get(collections))
+        .route("/rotation/{channel_id}/choice", put(set_choice))
 }
 
 #[derive(FromRow)]
@@ -54,6 +55,10 @@ struct MemberRow {
     amount_paid: i64,
     next_due_date: NaiveDate,
     claim_token: Option<String>,
+    choice_product_id: Option<Uuid>,
+    choice_color: Option<String>,
+    choice_size: Option<String>,
+    choice_name: Option<String>,
     paid_count: i64,
 }
 
@@ -94,6 +99,8 @@ async fn overview(u: AuthUser, State(s): State<AppState>, Path(id): Path<Uuid>) 
     let members: Vec<MemberRow> = sqlx::query_as(
         "SELECT m.id, m.user_id, m.plan_id, m.position, COALESCE(u.full_name, p.guest_name) AS name, COALESCE(u.phone, p.guest_phone) AS phone,
                 p.amount_paid, p.next_due_date, (CASE WHEN m.user_id IS NULL THEN p.claim_token END) AS claim_token,
+                m.choice_product_id, m.choice_color, m.choice_size,
+                (SELECT x.name FROM products x WHERE x.id = m.choice_product_id) AS choice_name,
                 (SELECT COUNT(*) FROM payments py WHERE py.plan_id = p.id AND py.status = 'success') AS paid_count
          FROM rotation_members m
          LEFT JOIN users u ON u.id = m.user_id
@@ -134,6 +141,11 @@ async fn overview(u: AuthUser, State(s): State<AppState>, Path(id): Path<Uuid>) 
             let plan_id = if is_owner || m.user_id == Some(u.id) { Some(m.plan_id) } else { None };
             let late = running && m.paid_count < due_rounds;
             let defaulted = running && m.paid_count < overdue_rounds;
+            let choice = if (is_owner || m.user_id == Some(u.id)) && m.choice_product_id.is_some() {
+                Some(json!({ "product_id": m.choice_product_id, "name": m.choice_name, "color": m.choice_color, "size": m.choice_size }))
+            } else {
+                None
+            };
             json!({
                 "id": m.id,
                 "position": m.position,
@@ -147,7 +159,8 @@ async fn overview(u: AuthUser, State(s): State<AppState>, Path(id): Path<Uuid>) 
                 "defaulted": defaulted,
                 "is_me": m.user_id == Some(u.id),
                 "is_guest": m.user_id.is_none(),
-                "claim_token": if is_owner { m.claim_token.clone() } else { None }
+                "claim_token": if is_owner { m.claim_token.clone() } else { None },
+                "choice": choice
             })
         })
         .collect();
@@ -214,6 +227,14 @@ async fn join(u: AuthUser, State(s): State<AppState>, Path(id): Path<Uuid>, Json
     if has_defaulted(&s, u.id).await? {
         return Err(AppError::BadRequest("You have overdue payments in another group. Please catch up before joining a new one.".into()));
     }
+    let mode: Option<String> = sqlx::query_scalar("SELECT join_mode FROM channels WHERE id = $1 AND kind = 'rotation'")
+        .bind(id)
+        .fetch_optional(&s.db)
+        .await?;
+    if mode.as_deref() == Some("approval") {
+        return crate::modules::requests::create_request(&s, &u, id).await;
+    }
+    crate::modules::billing::ensure_capacity_channel(&s, id, 1).await?;
     let mut tx = s.db.begin().await?;
 
     let row: Option<(i64, i32, Option<i32>, Option<NaiveDate>, String, String)> = sqlx::query_as(
@@ -439,6 +460,7 @@ struct CollectionRow {
     pot: i64,
     paid_count: i64,
     member_count: i64,
+    choice: Option<String>,
 }
 
 /// Every collection round across the seller's groups: who is due the goods and how much has come in.
@@ -450,7 +472,8 @@ async fn collections(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<V
                 (c.contribution_amount * (SELECT COUNT(*) FROM rotation_members x WHERE x.channel_id = c.id))::BIGINT AS pot,
                 (SELECT COUNT(*) FROM rotation_members m3 WHERE m3.channel_id = c.id
                    AND (SELECT COUNT(*) FROM payments py WHERE py.plan_id = m3.plan_id AND py.status = 'success') >= r.round_no) AS paid_count,
-                (SELECT COUNT(*) FROM rotation_members m4 WHERE m4.channel_id = c.id) AS member_count
+                (SELECT COUNT(*) FROM rotation_members m4 WHERE m4.channel_id = c.id) AS member_count,
+                (SELECT x.name || COALESCE(' (' || NULLIF(concat_ws(', ', m.choice_color, m.choice_size), '') || ')', '') FROM products x WHERE x.id = m.choice_product_id) AS choice
          FROM rotation_rounds r
          JOIN channels c ON c.id = r.channel_id
          JOIN rotation_members m ON m.channel_id = r.channel_id AND m.position = r.round_no
@@ -480,4 +503,57 @@ pub async fn has_defaulted(s: &AppState, user_id: Uuid) -> AppResult<bool> {
     .fetch_one(&s.db)
     .await?;
     Ok(d)
+}
+#[derive(Deserialize)]
+struct ChoiceReq {
+    product_id: Uuid,
+    color: Option<String>,
+    size: Option<String>,
+}
+
+/// A member picks (or changes) what they will collect on their turn.
+async fn set_choice(u: AuthUser, State(s): State<AppState>, Path(id): Path<Uuid>, Json(b): Json<ChoiceReq>) -> AppResult<Json<Value>> {
+    u.require("customer")?;
+    let m: Option<(Uuid, i32)> =
+        sqlx::query_as("SELECT id, position FROM rotation_members WHERE channel_id = $1 AND user_id = $2")
+            .bind(id)
+            .bind(u.id)
+            .fetch_optional(&s.db)
+            .await?;
+    let (member_id, position) =
+        m.ok_or_else(|| AppError::BadRequest("Join this group first to choose an item.".into()))?;
+    let collected: Option<bool> =
+        sqlx::query_scalar("SELECT collected FROM rotation_rounds WHERE channel_id = $1 AND round_no = $2")
+            .bind(id)
+            .bind(position)
+            .fetch_optional(&s.db)
+            .await?;
+    if collected == Some(true) {
+        return Err(AppError::BadRequest("You have already collected, so your choice is locked.".into()));
+    }
+    let ok: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM products WHERE id = $1 AND channel_id = $2 AND active)")
+        .bind(b.product_id)
+        .bind(id)
+        .fetch_one(&s.db)
+        .await?;
+    if !ok {
+        return Err(AppError::BadRequest("That item is not available in this group.".into()));
+    }
+    let opts: Vec<(String, String, bool)> =
+        sqlx::query_as("SELECT kind, label, sold_out FROM product_options WHERE product_id = $1")
+            .bind(b.product_id)
+            .fetch_all(&s.db)
+            .await?;
+    let color = crate::modules::products::pick(&opts, "color", b.color.as_deref())?;
+    let size = crate::modules::products::pick(&opts, "size", b.size.as_deref())?;
+    sqlx::query(
+        "UPDATE rotation_members SET choice_product_id = $1, choice_color = $2, choice_size = $3, chosen_at = now() WHERE id = $4",
+    )
+    .bind(b.product_id)
+    .bind(color)
+    .bind(size)
+    .bind(member_id)
+    .execute(&s.db)
+    .await?;
+    Ok(Json(json!({ "ok": true })))
 }

@@ -187,7 +187,12 @@ async fn with_products(s: &AppState, ch: Channel) -> AppResult<Json<Value>> {
             .bind(ch.id)
             .fetch_one(&s.db)
             .await?;
+        let mode: String = sqlx::query_scalar("SELECT join_mode FROM channels WHERE id = $1")
+            .bind(ch.id)
+            .fetch_one(&s.db)
+            .await?;
         Some(json!({
+            "join_mode": mode,
             "slots": ch.slots,
             "filled": filled,
             "status": ch.rotation_status,

@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sqlx::FromRow;
 use uuid::Uuid;
-use chrono::{DateTime, Utc}; 
+use chrono::{DateTime, NaiveDate, Utc}; 
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -34,6 +34,9 @@ struct AdminSeller {
     email: String,
     phone: String,
     payout_ready: bool,
+    plan: String,
+    plan_expires_at: Option<NaiveDate>,
+    used: i64,
     location: Option<String>,
     bio: Option<String>,
     instagram: Option<String>,
@@ -56,12 +59,16 @@ async fn overview(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<Valu
     )
     .fetch_one(&s.db)
     .await?;
+    let plan_income: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(amount), 0)::BIGINT FROM plan_payments WHERE status = 'success'")
+        .fetch_one(&s.db)
+        .await?;
     Ok(Json(json!({
         "users": users,
         "sellers": sellers,
         "pending_sellers": pending,
         "total_volume": volume,
-        "platform_income": fees
+        "platform_income": fees,
+        "plan_income": plan_income
     })))
 }
 
@@ -69,7 +76,9 @@ async fn sellers(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<Vec<A
     u.require("admin")?;
     let rows: Vec<AdminSeller> = sqlx::query_as(
         "SELECT s.user_id, s.business_name, s.verified, us.full_name, us.email, us.phone, us.location, us.bio, us.instagram, us.facebook, us.x_handle, us.website, us.whatsapp,
-                (s.paystack_subaccount_code IS NOT NULL) AS payout_ready
+                (s.paystack_subaccount_code IS NOT NULL) AS payout_ready,
+                s.plan, s.plan_expires_at,
+                (SELECT COUNT(*) FROM plans p JOIN channels c ON c.id = p.channel_id WHERE c.seller_id = s.user_id AND p.status = 'active') AS used
          FROM sellers s JOIN users us ON us.id = s.user_id
          ORDER BY s.verified, s.created_at DESC",
     )

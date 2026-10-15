@@ -9,6 +9,8 @@ import Dashboard from './pages/Dashboard'
 import Packages from './pages/Packages'
 import ImportList from './pages/ImportList'
 import ProductPage from './pages/ProductPage'
+import Billing from './pages/Billing'
+import BillingCallback from './pages/BillingCallback'
 import ProductEdit from './pages/ProductEdit'
 import PackageDetail from './pages/PackageDetail'
 import MyStore from './pages/MyStore'
@@ -49,6 +51,8 @@ export default function App() {
       <Route path="/store" element={<RequireRole role="seller"><MyStore /></RequireRole>} />
       <Route path="/packages" element={<RequireRole role="seller"><Packages /></RequireRole>} />
       <Route path="/import" element={<RequireRole role="seller"><ImportList /></RequireRole>} />
+      <Route path="/billing" element={<RequireRole role="seller"><Billing /></RequireRole>} />
+      <Route path="/billing/callback" element={<RequireRole role="seller"><BillingCallback /></RequireRole>} />
       <Route path="/product/:id" element={<ProductPage />} />
       <Route path="/products/:id/edit" element={<RequireRole role="seller"><ProductEdit /></RequireRole>} />
       <Route path="/packages/:id" element={<RequireRole role="seller"><PackageDetail /></RequireRole>} />
