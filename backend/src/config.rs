@@ -12,6 +12,10 @@ pub struct Config {
     pub email_from: String,
     pub cron_secret: String,
     pub online_payments: bool,
+    pub pay_bank: String,
+    pub pay_account_number: String,
+    pub pay_account_name: String,
+    pub support_whatsapp: String,
 }
 
 impl Config {
@@ -33,6 +37,10 @@ impl Config {
             resend_api_key: opt("RESEND_API_KEY", ""),
             email_from: opt("EMAIL_FROM", "Kobkart <onboarding@resend.dev>"),
             cron_secret: opt("CRON_SECRET", ""),
+            pay_bank: opt("PAY_BANK_NAME", ""),
+            pay_account_number: opt("PAY_ACCOUNT_NUMBER", ""),
+            pay_account_name: opt("PAY_ACCOUNT_NAME", ""),
+            support_whatsapp: opt("SUPPORT_WHATSAPP", ""),
             online_payments: env::var("ONLINE_PAYMENTS").map(|v| v.trim() != "false").unwrap_or(true),
         }
     }

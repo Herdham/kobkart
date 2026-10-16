@@ -108,7 +108,17 @@ async fn overview(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<Valu
         "limit": limit,
         "used": used,
         "plans": plans,
-        "online": s.config.online_payments
+        "online": s.config.online_payments,
+        "transfer": if s.config.pay_account_number.is_empty() {
+            Value::Null
+        } else {
+            json!({
+                "bank": s.config.pay_bank,
+                "account_number": s.config.pay_account_number,
+                "account_name": s.config.pay_account_name,
+                "whatsapp": s.config.support_whatsapp
+            })
+        }
     })))
 }
 

@@ -566,3 +566,5 @@
 .pc { margin-top: 10px; padding: 10px 12px; background: #fffafa; border: 1px solid #ecd3d3; border-radius: 10px; display: flex; flex-direction: column; gap: 8px; }
 .pc-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .pc-row select { height: 36px; border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; font: inherit; font-size: 13px; background: #fff; }
+
+.tr-steps { margin: 14px 0; padding-left: 20px; font-size: 14px; line-height: 1.7; }
