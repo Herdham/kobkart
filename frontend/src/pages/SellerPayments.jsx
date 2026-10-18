@@ -5,7 +5,6 @@ import DashboardLayout from '../components/DashboardLayout'
 import { api } from '../api/http'
 import { naira, shortDate } from '../api/seller'
 import PendingTransfers from '../components/PendingTransfers'
-import PendingTransfers from '../components/PendingTransfers'
 import './dashboard.css'
 
 const CHIP = { success: ['Paid', 'ontrack'], pending: ['Pending', 'completed'], failed: ['Failed', 'late'] }
@@ -55,7 +54,6 @@ export default function SellerPayments() {
   return (
     <DashboardLayout name={biz} role="seller" active="payments">
       <div className="db-stack">
-        <PendingTransfers />
         <PendingTransfers />
         <div className="db-page-head">
           <div>
