@@ -39,7 +39,7 @@ pub struct PlanView {
 
 const PLAN_SELECT: &str = "SELECT p.id, p.channel_id, c.name AS channel_name, sl.business_name AS seller_name,
     p.product_id,
-    (COALESCE(pr.name, c.name) || COALESCE(' (' || NULLIF(concat_ws(', ', p.choice_color, p.choice_size), '') || ')', '')) AS product_name,
+    (COALESCE(pr.name, c.name) || COALESCE(' (' || NULLIF(concat_ws(', ', p.choice_color, p.choice_size, CASE WHEN p.quantity > 1 THEN 'Qty ' || p.quantity END, 'Note: ' || p.choice_note), '') || ')', '')) AS product_name,
     COALESCE(pr.image_url, c.image_url) AS image_url,
     p.locked_price, p.installment_amount, c.frequency_days, p.amount_paid,
     (p.locked_price - p.amount_paid) AS remaining,
@@ -133,7 +133,7 @@ async fn seller_plans(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<
     let rows: Vec<SellerPlanView> = sqlx::query_as(
         "SELECT p.id, p.channel_id, c.name AS channel_name,
                 COALESCE(us.full_name, p.guest_name) AS customer_name, COALESCE(us.phone, p.guest_phone) AS customer_phone, (p.customer_id IS NULL) AS is_guest, (CASE WHEN p.customer_id IS NULL THEN p.claim_token END) AS claim_token,
-                ((COALESCE(pr.name, c.name) || COALESCE(' (' || NULLIF(concat_ws(', ', p.choice_color, p.choice_size), '') || ')', '')) || COALESCE(' (' || NULLIF(concat_ws(', ', p.choice_color, p.choice_size), '') || ')', '')) AS product_name,
+                ((COALESCE(pr.name, c.name) || COALESCE(' (' || NULLIF(concat_ws(', ', p.choice_color, p.choice_size, CASE WHEN p.quantity > 1 THEN 'Qty ' || p.quantity END, 'Note: ' || p.choice_note), '') || ')', '')) || COALESCE(' (' || NULLIF(concat_ws(', ', p.choice_color, p.choice_size, CASE WHEN p.quantity > 1 THEN 'Qty ' || p.quantity END, 'Note: ' || p.choice_note), '') || ')', '')) AS product_name,
                 p.locked_price, p.installment_amount, p.amount_paid, p.next_due_date, p.status, c.kind,
                 (p.status = 'active' AND p.next_due_date < CURRENT_DATE) AS late
          FROM plans p

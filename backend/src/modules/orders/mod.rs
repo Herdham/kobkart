@@ -47,7 +47,7 @@ struct GroupOrder {
 async fn orders(u: AuthUser, State(s): State<AppState>) -> AppResult<Json<Value>> {
     u.require("customer")?;
     let items: Vec<ItemOrder> = sqlx::query_as(
-        "SELECT p.id AS plan_id, (pr.name || COALESCE(' (' || NULLIF(concat_ws(', ', p.choice_color, p.choice_size), '') || ')', '')) AS product_name, pr.image_url, c.name AS channel_name,
+        "SELECT p.id AS plan_id, (pr.name || COALESCE(' (' || NULLIF(concat_ws(', ', p.choice_color, p.choice_size, CASE WHEN p.quantity > 1 THEN 'Qty ' || p.quantity END, 'Note: ' || p.choice_note), '') || ')', '')) AS product_name, pr.image_url, c.name AS channel_name,
                 sl.business_name AS seller_name, COALESCE(su.whatsapp, su.phone) AS seller_contact,
                 p.locked_price, p.amount_paid,
                 (SELECT COUNT(*) FROM payments py WHERE py.plan_id = p.id AND py.status = 'success') AS payments_made,

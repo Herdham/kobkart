@@ -348,6 +348,8 @@ struct JoinReq {
     product_id: Uuid,
     color: Option<String>,
     size: Option<String>,
+    quantity: Option<i32>,
+    note: Option<String>,
 }
 
 pub fn pick(opts: &[(String, String, bool)], kind: &str, chosen: Option<&str>) -> AppResult<Option<String>> {
@@ -362,7 +364,14 @@ pub fn pick(opts: &[(String, String, bool)], kind: &str, chosen: Option<&str>) -
     match mine.iter().find(|o| o.1.to_lowercase() == want) {
         Some(o) if !o.2 => Ok(Some(o.1.clone())),
         Some(_) => bad("That option is sold out"),
-        None => bad("Please choose one of the listed options"),
+        None => {
+            let raw = chosen.unwrap_or("").trim();
+            if raw.chars().count() > 30 {
+                bad("Size and colour names must be short")
+            } else {
+                Ok(Some(raw.to_string()))
+            }
+        }
     }
 }
 
@@ -409,11 +418,17 @@ async fn join_item(u: AuthUser, State(s): State<AppState>, Json(b): Json<JoinReq
         return bad("You already joined this item with the same choices. Check My Orders.");
     }
 
+    let qty = b.quantity.unwrap_or(1);
+    if !(1..=50).contains(&qty) {
+        return bad("Quantity must be between 1 and 50");
+    }
+    let note = clean(b.note, 120)?;
+    let price = price * qty as i64;
     let installment = contribution.min(price);
     let next_due = Utc::now().date_naive() + Duration::days(freq as i64);
     let id: Uuid = sqlx::query_scalar(
-        "INSERT INTO plans (customer_id, channel_id, product_id, locked_price, installment_amount, next_due_date, choice_color, choice_size)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
+        "INSERT INTO plans (customer_id, channel_id, product_id, locked_price, installment_amount, next_due_date, choice_color, choice_size, quantity, choice_note)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id",
     )
     .bind(u.id)
     .bind(channel_id)
@@ -423,6 +438,8 @@ async fn join_item(u: AuthUser, State(s): State<AppState>, Json(b): Json<JoinReq
     .bind(next_due)
     .bind(&color)
     .bind(&size)
+    .bind(qty)
+    .bind(&note)
     .fetch_one(&s.db)
     .await?;
     Ok(Json(json!({ "plan_id": id })))

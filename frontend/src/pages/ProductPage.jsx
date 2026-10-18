@@ -25,6 +25,8 @@ export default function ProductPage() {
   const [sheet, setSheet] = useState(false)
   const [joining, setJoining] = useState(false)
   const [msg, setMsg] = useState('')
+  const [qty, setQty] = useState(Math.min(50, Math.max(1, Number(params.get('qty')) || 1)))
+  const [note, setNote] = useState(params.get('note') || '')
 
   useEffect(() => {
     api(`/products/${id}`)
@@ -75,7 +77,9 @@ export default function ProductPage() {
 
   const { product: p, package: ch, colors, sizes, images } = data
   const isGroup = ch.kind === 'rotation'
-  const each = Math.min(ch.contribution_amount, p.price)
+  const total = p.price * qty
+  const each = Math.min(ch.contribution_amount, total)
+  const payCount = Math.ceil(total / Math.max(ch.contribution_amount, 1))
   const pot = grp?.pot || 0
   const isOwner = session?.user?.id === ch.seller_id
   const need = colors.length && !color ? 'Choose a colour' : sizes.length && !size ? 'Choose a size' : ''
@@ -93,7 +97,7 @@ export default function ProductPage() {
   }
 
   const nextPath = () =>
-    `/product/${id}?join=1${color ? `&color=${encodeURIComponent(color)}` : ''}${size ? `&size=${encodeURIComponent(size)}` : ''}`
+    `/product/${id}?join=1${color ? `&color=${encodeURIComponent(color)}` : ''}${size ? `&size=${encodeURIComponent(size)}` : ''}&qty=${qty}${note ? `&note=${encodeURIComponent(note)}` : ''}`
   const remember = () => localStorage.setItem('kobkart_next', JSON.stringify({ path: nextPath(), at: Date.now() }))
 
   function start() {
@@ -106,7 +110,7 @@ export default function ProductPage() {
     setJoining(true)
     setMsg('')
     try {
-      await api('/catalog/join', { method: 'POST', body: { product_id: id, color: color || null, size: size || null } })
+      await api('/catalog/join', { method: 'POST', body: { product_id: id, color: color || null, size: size || null, quantity: qty, note: note || null } })
       nav('/my-orders', { replace: true })
     } catch (e) {
       setMsg(e.message)
@@ -163,6 +167,7 @@ export default function ProductPage() {
           {p.brand && <p className="pp-brand">{p.brand}</p>}
           <h1>{p.name}</h1>
           <div className="pp-price">{naira(p.price)}</div>
+          {!isGroup && qty > 1 && <p className="muted small" style={{ margin: '2px 0 0' }}>{qty} × {naira(p.price)} = <b>{naira(total)}</b></p>}
           {isGroup ? (
             <p className="muted small" style={{ margin: 0 }}>
               {grp ? `The group pot is ${naira(pot)} each round. ` : ''}
@@ -170,32 +175,33 @@ export default function ProductPage() {
             </p>
           ) : (
             <p className="muted small" style={{ margin: 0 }}>
-              Pay {naira(each)} every {ch.frequency_days} day{ch.frequency_days > 1 ? 's' : ''} • {data.payments} payment{data.payments === 1 ? '' : 's'} • about {data.days} days
+              Pay {naira(each)} every {ch.frequency_days} day{ch.frequency_days > 1 ? 's' : ''} • {payCount} payment{payCount === 1 ? '' : 's'} • about {payCount * ch.frequency_days} days
             </p>
           )}
 
           {colors.length > 0 && (
-            <div className="opt">
-              <b>Colour{color ? `: ${color}` : ''}</b>
-              <div className="chips">
-                {colors.map((c) => (
-                  <button key={c.label} type="button" disabled={c.sold_out} className={`chip ${color === c.label ? 'on' : ''}`} onClick={() => pickColor(c.label)}>
-                    {c.label}{c.sold_out && <small>Sold out</small>}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <OptionPicker title="Colour" items={colors} value={color} setValue={(v) => { setColor(v); setMsg('') }} onPick={pickColor} placeholder="Type the colour you want" />
           )}
           {sizes.length > 0 && (
+            <OptionPicker title="Size" items={sizes} value={size} setValue={(v) => { setSize(v); setMsg('') }} onPick={(l) => { setSize(l); setMsg('') }} placeholder="Type the size you want" />
+          )}
+
+          {!isGroup && !isOwner && !ch.closed && (
             <div className="opt">
-              <b>Size{size ? `: ${size}` : ''}</b>
-              <div className="chips">
-                {sizes.map((z) => (
-                  <button key={z.label} type="button" disabled={z.sold_out} className={`chip ${size === z.label ? 'on' : ''}`} onClick={() => { setSize(z.label); setMsg('') }}>
-                    {z.label}{z.sold_out && <small>Sold out</small>}
-                  </button>
-                ))}
+              <b>Quantity</b>
+              <div className="qty">
+                <button type="button" aria-label="Less" onClick={() => setQty((n) => Math.max(1, n - 1))}>−</button>
+                <span>{qty}</span>
+                <button type="button" aria-label="More" onClick={() => setQty((n) => Math.min(50, n + 1))}>+</button>
               </div>
+              <b style={{ display: 'block', marginTop: 16 }}>Note to the seller <small className="muted">(optional)</small></b>
+              <textarea
+                className="pp-note"
+                maxLength={120}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Anything the seller should know, for example: my shoe size is 44"
+              />
             </div>
           )}
 
@@ -226,8 +232,8 @@ export default function ProductPage() {
 
       <div className="pp-bar">
         <div>
-          <b>{naira(p.price)}</b>
-          <small>{isGroup ? (grp ? `Group pot ${naira(pot)}` : 'Group item') : `${data.payments} payments of ${naira(each)}`}</small>
+          <b>{naira(isGroup ? p.price : total)}</b>
+          <small>{isGroup ? (grp ? `Group pot ${naira(pot)}` : 'Group item') : `${payCount} payments of ${naira(each)}`}</small>
         </div>
         {action}
       </div>
@@ -251,9 +257,11 @@ export default function ProductPage() {
                 <div className="jn-sum">
                   {color && <div><span>Colour</span><b>{color}</b></div>}
                   {size && <div><span>Size</span><b>{size}</b></div>}
-                  <div><span>Item price (locked)</span><b>{naira(p.price)}</b></div>
+                  {qty > 1 && <div><span>Quantity</span><b>{qty} × {naira(p.price)}</b></div>}
+                  {note && <div><span>Your note</span><b>{note}</b></div>}
+                  <div><span>Total price (locked)</span><b>{naira(total)}</b></div>
                   <div><span>You pay</span><b>{naira(each)} every {ch.frequency_days} days</b></div>
-                  <div><span>Number of payments</span><b>{data.payments}</b></div>
+                  <div><span>Number of payments</span><b>{payCount}</b></div>
                 </div>
                 {msg && <div className="alert">{msg}</div>}
                 <div className="fm-actions">
@@ -264,6 +272,27 @@ export default function ProductPage() {
             )}
           </div>
         </>
+      )}
+    </div>
+  )
+}
+// The seller's list as chips, plus an "Other" chip so customers can type their own.
+function OptionPicker({ title, items, value, setValue, onPick, placeholder }) {
+  const listed = items.some((x) => x.label.toLowerCase() === value.toLowerCase())
+  const [other, setOther] = useState(!!value && !listed)
+  return (
+    <div className="opt">
+      <b>{title}{value ? `: ${value}` : ''}</b>
+      <div className="chips">
+        {items.map((c) => (
+          <button key={c.label} type="button" disabled={c.sold_out} className={`chip ${!other && value === c.label ? 'on' : ''}`} onClick={() => { setOther(false); onPick(c.label) }}>
+            {c.label}{c.sold_out && <small>Sold out</small>}
+          </button>
+        ))}
+        <button type="button" className={`chip ${other ? 'on' : ''}`} onClick={() => { setOther(true); setValue('') }}>Other</button>
+      </div>
+      {other && (
+        <input className="adm-search" style={{ height: 42, marginTop: 10 }} maxLength={30} value={value} onChange={(e) => setValue(e.target.value)} placeholder={placeholder} />
       )}
     </div>
   )

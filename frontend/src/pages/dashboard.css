@@ -576,3 +576,7 @@
 .tm-amount { display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; font-size: 14px; }
 .tm-amount b { font-size: 18px; }
 .tm-done { text-align: center; color: #1f9d55; margin-bottom: 6px; }
+.qty { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+.qty button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: #fff; font-size: 20px; cursor: pointer; color: var(--ink); }
+.qty span { min-width: 26px; text-align: center; font-weight: 600; font-size: 16px; }
+.pp-note { width: 100%; margin-top: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 14px; min-height: 64px; resize: vertical; box-sizing: border-box; }

@@ -1,0 +1,3 @@
+ALTER TABLE plans
+  ADD COLUMN quantity INT NOT NULL DEFAULT 1 CHECK (quantity BETWEEN 1 AND 50),
+  ADD COLUMN choice_note TEXT;
