@@ -46,9 +46,6 @@ pub fn routes() -> Router<AppState> {
 /// Customer taps "Pay now": we create a pending payment and get a Paystack checkout link.
 async fn pay(u: AuthUser, State(s): State<AppState>, Path(plan_id): Path<Uuid>) -> AppResult<Json<Value>> {
     u.require("customer")?;
-    if !s.config.online_payments {
-        return Err(AppError::BadRequest("Online payment is not open yet. Please pay your organizer directly and ask them to record it.".into()));
-    }
     let (locked, installment, paid, status, channel_id): (i64, i64, i64, String, Uuid) = sqlx::query_as(
         "SELECT locked_price, installment_amount, amount_paid, status, channel_id
          FROM plans WHERE id = $1 AND customer_id = $2",
