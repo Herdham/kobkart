@@ -81,17 +81,42 @@ async fn pay(u: AuthUser, State(s): State<AppState>, Path(plan_id): Path<Uuid>) 
     }
 
     if !s.config.online_payments {
-        let (seller_name, phone, bank, acct_name, acct_no): (String, String, Option<String>, Option<String>, Option<String>) =
-            sqlx::query_as(
-                "SELECT s.business_name, u.phone, s.payout_bank_name, s.payout_account_name, s.payout_account_number
-                 FROM channels c
-                 JOIN sellers s ON s.user_id = c.seller_id
-                 JOIN users u ON u.id = c.seller_id
-                 WHERE c.id = $1",
-            )
-            .bind(channel_id)
-            .fetch_one(&s.db)
-            .await?;
+        let (seller_id, seller_name, phone, bank, acct_name, mut acct_no, sub): (
+            Uuid,
+            String,
+            String,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+        ) = sqlx::query_as(
+            "SELECT s.user_id, s.business_name, u.phone, s.payout_bank_name, s.payout_account_name,
+                    s.payout_account_number, s.paystack_subaccount_code
+             FROM channels c
+             JOIN sellers s ON s.user_id = c.seller_id
+             JOIN users u ON u.id = c.seller_id
+             WHERE c.id = $1",
+        )
+        .bind(channel_id)
+        .fetch_one(&s.db)
+        .await?;
+
+        // Sellers who saved their bank before we kept the full number: read it back from Paystack once and store it.
+        if acct_no.is_none() {
+            if let Some(code) = sub.as_deref() {
+                if let Ok(d) = paystack::get(&s, &format!("/subaccount/{code}"), &[]).await {
+                    if let Some(n) = d["account_number"].as_str() {
+                        acct_no = Some(n.to_string());
+                        let _ = sqlx::query("UPDATE sellers SET payout_account_number = $1 WHERE user_id = $2")
+                            .bind(n)
+                            .bind(seller_id)
+                            .execute(&s.db)
+                            .await;
+                    }
+                }
+            }
+        }
+
         return Ok(Json(json!({
             "online": false,
             "plan_id": plan_id,
