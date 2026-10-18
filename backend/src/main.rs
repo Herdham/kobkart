@@ -55,6 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(modules::dashboard::routes())
         .merge(modules::admin::routes())
         .merge(modules::billing::routes())
+        .merge(modules::claims::routes())
         .merge(modules::requests::routes())
         .merge(modules::importer::routes())
         .merge(modules::lifecycle::routes())

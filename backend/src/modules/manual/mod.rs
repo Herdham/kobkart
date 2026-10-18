@@ -143,15 +143,15 @@ async fn add_guest_member(
 }
 
 #[derive(Deserialize)]
-struct ManualReq {
-    plan_id: Uuid,
-    amount: i64, // kobo
-    method: Option<String>,
-    note: Option<String>,
+pub struct ManualReq {
+    pub plan_id: Uuid,
+    pub amount: i64, // kobo
+    pub method: Option<String>,
+    pub note: Option<String>,
 }
 
 /// The seller records a payment the member made outside the app (transfer or cash).
-async fn record_payment(u: AuthUser, State(s): State<AppState>, Json(b): Json<ManualReq>) -> AppResult<Json<Value>> {
+pub async fn record_payment(u: AuthUser, State(s): State<AppState>, Json(b): Json<ManualReq>) -> AppResult<Json<Value>> {
     u.require("seller")?;
     let method = b.method.as_deref().unwrap_or("transfer").trim().to_lowercase();
     if !METHODS.contains(&method.as_str()) {

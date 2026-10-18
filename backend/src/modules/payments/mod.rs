@@ -83,6 +83,30 @@ async fn pay(u: AuthUser, State(s): State<AppState>, Path(plan_id): Path<Uuid>) 
         return Err(AppError::BadRequest("Nothing left to pay".into()));
     }
 
+    if !s.config.online_payments {
+        let (seller_name, phone, bank, acct_name, acct_no): (String, String, Option<String>, Option<String>, Option<String>) =
+            sqlx::query_as(
+                "SELECT s.business_name, u.phone, s.payout_bank_name, s.payout_account_name, s.payout_account_number
+                 FROM channels c
+                 JOIN sellers s ON s.user_id = c.seller_id
+                 JOIN users u ON u.id = c.seller_id
+                 WHERE c.id = $1",
+            )
+            .bind(channel_id)
+            .fetch_one(&s.db)
+            .await?;
+        return Ok(Json(json!({
+            "online": false,
+            "plan_id": plan_id,
+            "amount": amount,
+            "seller": seller_name,
+            "whatsapp": phone,
+            "bank": bank,
+            "account_name": acct_name,
+            "account_number": acct_no
+        })));
+    }
+
     let subaccount: Option<String> = sqlx::query_scalar(
         "SELECT s.paystack_subaccount_code FROM channels c
          JOIN sellers s ON s.user_id = c.seller_id WHERE c.id = $1",

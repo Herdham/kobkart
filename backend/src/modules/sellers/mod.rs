@@ -158,13 +158,14 @@ async fn set_bank(u: AuthUser, State(s): State<AppState>, Json(b): Json<BankReq>
     let last4 = b.account_number[b.account_number.len() - 4..].to_string();
     sqlx::query(
         "UPDATE sellers SET paystack_subaccount_code = $1, payout_bank_name = $2,
-                payout_account_name = $3, payout_account_last4 = $4 WHERE user_id = $5",
+                payout_account_name = $3, payout_account_last4 = $4, payout_account_number = $6 WHERE user_id = $5",
     )
     .bind(code)
     .bind(&b.bank_name)
     .bind(&account_name)
     .bind(&last4)
     .bind(u.id)
+    .bind(&b.account_number)
     .execute(&s.db)
     .await?;
     Ok(Json(json!({

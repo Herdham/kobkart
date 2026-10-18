@@ -4,6 +4,7 @@ import { ArrowRight, CalendarDays, Check, Clock, Crown, Link2, MessageCircle, Pa
 import DashboardLayout from '../components/DashboardLayout'
 import { getSession } from '../api/auth'
 import { daysUntil, getSellerData, naira, shortDate, whatsappLink } from '../api/seller'
+import PendingTransfers from '../components/PendingTransfers'
 import './dashboard.css'
 
 const greeting = () => {
@@ -298,6 +299,7 @@ export default function SellerDashboard() {
     <DashboardLayout name={businessName} search={search} onSearch={setSearch} onSoon={soon}>
       {error && <div className="alert">{error}</div>}
       {!data && !error && <div className="db-loading">Loading your dashboard...</div>}
+      <PendingTransfers />
       {content}
       {toast && <div className="db-toast">{toast}</div>}
     </DashboardLayout>

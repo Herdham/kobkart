@@ -48,8 +48,8 @@ function wrap(ctx, text, maxWidth, maxLines) {
 }
 
 const LAYOUT = {
-  status: { H: 1920, imgH: 800, bottom: 150, bar: 190, title: [66, 80], head: [54, 70], detail: [38, 52], desc: [34, 48, 3], gap: 56 },
-  post: { H: 1350, imgH: 440, bottom: 60, bar: 150, title: [58, 68], head: [48, 62], detail: [32, 44], desc: [30, 42, 2], gap: 40 },
+  status: { H: 1920, imgH: 800, bottom: 150, bar: 226, title: [66, 80], head: [54, 70], detail: [38, 52], desc: [34, 48, 3], gap: 56 },
+  post: { H: 1350, imgH: 440, bottom: 60, bar: 186, title: [58, 68], head: [48, 62], detail: [32, 44], desc: [30, 42, 2], gap: 40 },
 }
 
 export async function makeShareCard({ format = 'status', seller, title, headline, detail, description, imageUrl, link }) {
@@ -161,6 +161,9 @@ export async function makeShareCard({ format = 'status', seller, title, headline
   ctx.font = font(500, 32)
   const shown = String(link || '').replace(/^https?:\/\//, '')
   ctx.fillText(wrap(ctx, shown, innerW - 88, 1)[0] || '', pad + 44, barY + 34 + 62)
+  ctx.fillStyle = '#e8bcbc'
+  ctx.font = font(500, 26)
+  ctx.fillText('Powered by Kobkart  •  Run a group? Start free', pad + 44, barY + 34 + 62 + 46)
 
   return new Promise((resolve, reject) =>
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not make the image'))), 'image/png')

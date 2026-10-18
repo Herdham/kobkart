@@ -1,8 +1,14 @@
 import { api } from './http'
+import { showTransfer } from '../components/TransferModal'
 
 // Creates a payment and sends the customer to Paystack's checkout page.
 export async function startPayment(planId) {
   const r = await api(`/plans/${planId}/pay`, { method: 'POST' })
+  if (r.online === false) {
+    // online payments are off: show the seller's bank details instead
+    showTransfer(r)
+    throw new Error('') // stops the button spinner; empty message means no error toast
+  }
   window.location.href = r.authorization_url
 }
 

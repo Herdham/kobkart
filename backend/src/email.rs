@@ -68,6 +68,7 @@ pub fn naira(kobo: i64) -> String {
 
 /// Branded email. `body` must already be safe HTML (escape user text with esc()).
 pub fn card(heading: &str, body: &str, cta: Option<(&str, &str)>) -> String {
+    let site = std::env::var("FRONTEND_URL").unwrap_or_default();
     let button = cta
         .map(|(label, url)| {
             format!(
@@ -76,7 +77,7 @@ pub fn card(heading: &str, body: &str, cta: Option<(&str, &str)>) -> String {
         })
         .unwrap_or_default();
     format!(
-        r##"<div style="font-family:Arial,sans-serif;background:#f7eeee;padding:24px"><div style="max-width:480px;margin:auto;background:#ffffff;border-radius:16px;padding:32px"><div style="font-size:26px;font-weight:700;color:#6b0f1e">Kobkart</div><h2 style="color:#2a1a1d;margin:24px 0 8px">{heading}</h2><div style="color:#4a3d40;font-size:15px;line-height:1.6">{body}</div>{button}<p style="color:#9a8d90;font-size:12px;margin-top:26px">You are receiving this because you use Kobkart.</p></div></div>"##
+        r##"<div style="font-family:Arial,sans-serif;background:#f7eeee;padding:24px"><div style="max-width:480px;margin:auto;background:#ffffff;border-radius:16px;padding:32px"><div style="font-size:26px;font-weight:700;color:#6b0f1e">Kobkart</div><h2 style="color:#2a1a1d;margin:24px 0 8px">{heading}</h2><div style="color:#4a3d40;font-size:15px;line-height:1.6">{body}</div>{button}<p style="color:#9a8d90;font-size:12px;margin-top:26px">You are receiving this because you use Kobkart. Run a group or sell on installments? <a href="{site}" style="color:#6b0f1e">Start free on Kobkart</a>.</p></div></div>"##
     )
 }
 
