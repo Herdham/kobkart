@@ -6,6 +6,7 @@ import { api } from '../api/http'
 import { getSession } from '../api/auth'
 import { naira, shortDate, whatsappLink } from '../api/seller'
 import { startPayment } from '../api/customer'
+import MyBaskets from '../components/MyBaskets'
 import './dashboard.css'
 
 const STEPS = ['Paying', 'Fully paid', 'Delivered']
@@ -68,6 +69,7 @@ export default function MyOrders() {
   return (
     <DashboardLayout name={user?.full_name} role="customer" active="orders" search={search} onSearch={setSearch}>
       <div className="db-stack">
+        <MyBaskets />
         <div className="db-page-head">
           <div>
             <h1>My Orders</h1>

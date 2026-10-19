@@ -123,9 +123,9 @@ async fn detail(State(s): State<AppState>, Path(id): Path<Uuid>) -> AppResult<Js
     .bind(id)
     .fetch_one(&s.db)
     .await?;
-    let c: (Uuid, String, String, i64, i32, String, Uuid, bool, String, bool) = sqlx::query_as(
+    let c: (Uuid, String, String, i64, i32, String, Uuid, bool, String, bool, Option<i64>) = sqlx::query_as(
         "SELECT c.id, c.name, c.kind, c.contribution_amount, c.frequency_days, c.invite_code, c.seller_id,
-                c.archived_at IS NOT NULL, sl.business_name, sl.verified
+                c.archived_at IS NOT NULL, sl.business_name, sl.verified, c.basket_budget
          FROM channels c JOIN sellers sl ON sl.user_id = c.seller_id WHERE c.id = $1",
     )
     .bind(p.1)
@@ -157,7 +157,7 @@ async fn detail(State(s): State<AppState>, Path(id): Path<Uuid>) -> AppResult<Js
         "images": images.iter().map(|i| json!({ "id": i.0, "color": i.1 })).collect::<Vec<_>>(),
         "package": {
             "id": c.0, "name": c.1, "kind": c.2, "contribution_amount": c.3, "frequency_days": c.4,
-            "invite_code": c.5, "seller_id": c.6, "closed": c.7, "seller": c.8, "seller_verified": c.9
+            "invite_code": c.5, "seller_id": c.6, "closed": c.7, "seller": c.8, "seller_verified": c.9, "budget": c.10
         },
         "payments": payments,
         "days": payments * c.4 as i64
@@ -403,6 +403,13 @@ async fn join_item(u: AuthUser, State(s): State<AppState>, Json(b): Json<JoinReq
     let color = pick(&opts, "color", b.color.as_deref())?;
     let size = pick(&opts, "size", b.size.as_deref())?;
 
+    let is_basket: bool = sqlx::query_scalar("SELECT basket_budget IS NOT NULL FROM channels WHERE id = $1")
+        .bind(channel_id)
+        .fetch_one(&s.db)
+        .await?;
+    if is_basket {
+        return bad("This package uses a basket. Please add items to your basket instead.");
+    }
     let already: bool = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM plans WHERE customer_id = $1 AND product_id = $2
                        AND status IN ('active', 'completed')

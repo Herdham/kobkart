@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard'
 import Packages from './pages/Packages'
 import ImportList from './pages/ImportList'
 import ProductPage from './pages/ProductPage'
+import Basket from './pages/Basket'
 import Billing from './pages/Billing'
 import BillingCallback from './pages/BillingCallback'
 import ProductEdit from './pages/ProductEdit'
@@ -59,6 +60,7 @@ export default function App() {
       <Route path="/join" element={<Join />} />
       <Route path="/join/:code" element={<Join />} />
 
+      <Route path="/basket/:planId" element={<RequireRole role="customer"><Basket /></RequireRole>} />
       <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="/plans/:id" element={<RequireRole role="customer"><PlanDetail /></RequireRole>} />
       <Route path="/contributions" element={<RequireRole role="customer"><Contributions /></RequireRole>} />

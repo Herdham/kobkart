@@ -15,4 +15,5 @@ pub mod importer;
 pub mod lifecycle;
 pub mod requests;
 pub mod billing;
+pub mod baskets;
 pub mod claims;

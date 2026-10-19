@@ -10,6 +10,8 @@ import { API, api, toKobo } from '../api/http'
 import { getSession } from '../api/auth'
 import { naira, shortDate, whatsappLink } from '../api/seller'
 import { packageList } from '../api/whatsappList'
+import BudgetControl from '../components/BudgetControl'
+import GroupEditor from '../components/GroupEditor'
 import './dashboard.css'
 
 export default function PackageDetail() {
@@ -175,6 +177,8 @@ export default function PackageDetail() {
                   }}
                 />
                 <LifecycleBar channel={ch} onChanged={load} />
+        <GroupEditor channel={ch} onChanged={load} />
+                <BudgetControl channel={ch} onChanged={load} />
           </div>
         </section>
 

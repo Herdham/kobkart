@@ -114,7 +114,7 @@ export default function GroupCatalogue({ channelId, pot, owner, me, members, onC
         </div>
       )}
 
-      {owner && members.length > 0 && (
+      {false && owner && members.length > 0 && (
         <div className="gc-picks">
           <b>Members' picks</b>
           {members.map((m) => (

@@ -4,6 +4,7 @@ import { Check, MessageCircle } from 'lucide-react'
 import DashboardLayout from '../components/DashboardLayout'
 import { api } from '../api/http'
 import { naira, shortDate, whatsappLink } from '../api/seller'
+import BasketOrders from '../components/BasketOrders'
 import './dashboard.css'
 
 const TABS = [
@@ -92,6 +93,7 @@ export default function Orders() {
   return (
     <DashboardLayout name={biz} role="seller" active="orders" search={search} onSearch={setSearch}>
       <div className="db-stack">
+        <BasketOrders />
         <div className="db-page-head">
           <div>
             <h1>Orders</h1>
