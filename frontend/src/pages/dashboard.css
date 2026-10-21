@@ -595,3 +595,5 @@
 .bk-qty button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: #fff; cursor: pointer; display: grid; place-items: center; color: var(--ink); }
 .bk-total { display: flex; justify-content: space-between; padding-top: 12px; font-size: 15px; }
 .bk-left { background: #fdf4f3; border-radius: 10px; padding: 10px 12px; font-size: 13.5px; line-height: 1.6; margin-top: 10px; }
+.bd.official { background: #6b0f1a; color: #fff; border-color: #6b0f1a; }
+.bd.official { background: #6b0f1a; color: #fff; border-color: #6b0f1a; }

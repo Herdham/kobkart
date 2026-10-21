@@ -123,9 +123,9 @@ async fn detail(State(s): State<AppState>, Path(id): Path<Uuid>) -> AppResult<Js
     .bind(id)
     .fetch_one(&s.db)
     .await?;
-    let c: (Uuid, String, String, i64, i32, String, Uuid, bool, String, bool, Option<i64>) = sqlx::query_as(
+    let c: (Uuid, String, String, i64, i32, String, Uuid, bool, String, bool, Option<i64>, bool) = sqlx::query_as(
         "SELECT c.id, c.name, c.kind, c.contribution_amount, c.frequency_days, c.invite_code, c.seller_id,
-                c.archived_at IS NOT NULL, sl.business_name, sl.verified, c.basket_budget
+                c.archived_at IS NOT NULL, sl.business_name, sl.verified, c.basket_budget, sl.official
          FROM channels c JOIN sellers sl ON sl.user_id = c.seller_id WHERE c.id = $1",
     )
     .bind(p.1)
@@ -157,7 +157,7 @@ async fn detail(State(s): State<AppState>, Path(id): Path<Uuid>) -> AppResult<Js
         "images": images.iter().map(|i| json!({ "id": i.0, "color": i.1 })).collect::<Vec<_>>(),
         "package": {
             "id": c.0, "name": c.1, "kind": c.2, "contribution_amount": c.3, "frequency_days": c.4,
-            "invite_code": c.5, "seller_id": c.6, "closed": c.7, "seller": c.8, "seller_verified": c.9, "budget": c.10
+            "invite_code": c.5, "seller_id": c.6, "closed": c.7, "seller": c.8, "seller_verified": c.9, "budget": c.10, "seller_official": c.11
         },
         "payments": payments,
         "days": payments * c.4 as i64

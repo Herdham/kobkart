@@ -222,6 +222,7 @@ export default function ProductPage() {
 
           <div className="pp-seller">
             <span>Sold by <b>{ch.seller}</b></span>
+            {ch.seller_official && <span className="bd official">★ Official Kobkart store</span>}
             {ch.seller_verified && <span className="bd ontrack"><ShieldCheck size={13} style={{ marginRight: 4 }} />Verified seller</span>}
             <Link to={`/join/${ch.invite_code}`} className="link-strong">{isGroup ? 'About this group' : 'More from this package'} <ArrowRight size={14} /></Link>
           </div>
