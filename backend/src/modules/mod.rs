@@ -12,6 +12,7 @@ pub mod orders;
 pub mod manual;
 pub mod jobs;
 pub mod importer;
+pub mod groupstatus;
 pub mod lifecycle;
 pub mod requests;
 pub mod billing;

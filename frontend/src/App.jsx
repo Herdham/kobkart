@@ -30,6 +30,7 @@ import { getSession } from './api/auth'
 import MyOrders from './pages/MyOrders'
 import AdminUsers from './pages/AdminUsers'
 import Claim from './pages/Claim'
+import GroupStatus from './pages/GroupStatus'
 
 function RequireRole({ role, children }) {
   const s = getSession()
@@ -61,6 +62,7 @@ export default function App() {
       <Route path="/join/:code" element={<Join />} />
 
       <Route path="/basket/:planId" element={<RequireRole role="customer"><Basket /></RequireRole>} />
+      <Route path="/g/:code" element={<GroupStatus />} />
       <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="/plans/:id" element={<RequireRole role="customer"><PlanDetail /></RequireRole>} />
       <Route path="/contributions" element={<RequireRole role="customer"><Contributions /></RequireRole>} />

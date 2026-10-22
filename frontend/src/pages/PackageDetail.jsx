@@ -13,6 +13,7 @@ import { packageList } from '../api/whatsappList'
 import BudgetControl from '../components/BudgetControl'
 import GroupEditor from '../components/GroupEditor'
 import './dashboard.css'
+import GroupSharePanel from '../components/GroupSharePanel'
 
 export default function PackageDetail() {
   const { id } = useParams()
@@ -177,6 +178,7 @@ export default function PackageDetail() {
                   }}
                 />
                 <LifecycleBar channel={ch} onChanged={load} />
+        <GroupSharePanel channel={ch} />
         <GroupEditor channel={ch} onChanged={load} />
                 <BudgetControl channel={ch} onChanged={load} />
           </div>

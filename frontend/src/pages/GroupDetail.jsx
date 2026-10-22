@@ -14,6 +14,7 @@ import GroupCatalogue from '../components/GroupCatalogue'
 import JoinRequests from '../components/JoinRequests'
 import GroupEditor from '../components/GroupEditor'
 import './dashboard.css'
+import GroupSharePanel from '../components/GroupSharePanel'
 
 export default function GroupDetail() {
   const { id } = useParams()
@@ -180,6 +181,7 @@ export default function GroupDetail() {
                   }}
                 />
                 <LifecycleBar channel={ch} onChanged={load} />
+        <GroupSharePanel channel={ch} kind="rotation" />
         <GroupEditor channel={ch} kind="rotation" onChanged={load} />
               </>
             )}

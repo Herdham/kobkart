@@ -6,6 +6,7 @@ import { getSession } from '../api/auth'
 import { daysUntil, getSellerData, naira, shortDate, whatsappLink } from '../api/seller'
 import PendingTransfers from '../components/PendingTransfers'
 import './dashboard.css'
+import GuestClaims from '../components/GuestClaims'
 
 const greeting = () => {
   const h = new Date().getHours()
@@ -300,6 +301,7 @@ export default function SellerDashboard() {
       {error && <div className="alert">{error}</div>}
       {!data && !error && <div className="db-loading">Loading your dashboard...</div>}
       <PendingTransfers />
+        <GuestClaims />
       {content}
       {toast && <div className="db-toast">{toast}</div>}
     </DashboardLayout>
