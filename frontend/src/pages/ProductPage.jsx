@@ -6,6 +6,7 @@ import { API, api } from '../api/http'
 import { getSession } from '../api/auth'
 import { naira } from '../api/seller'
 import './dashboard.css'
+import ProductShareButtons from '../components/ProductShareButtons'
 
 export default function ProductPage() {
   const { id } = useParams()
@@ -241,6 +242,7 @@ export default function ProductPage() {
           {isGroup && role === 'customer' && !member && !isOwner && (
             <div className="alert info" style={{ marginTop: 14 }}>You can add this item to your basket once you have joined the group.</div>
           )}
+          {isOwner && <ProductShareButtons data={data} />}
           {msg && !sheet && <div className="alert" style={{ marginTop: 14 }}>{msg}</div>}
         </div>
       </main>
